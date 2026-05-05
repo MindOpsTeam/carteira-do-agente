@@ -1,7 +1,7 @@
 project_id = "odhcfrgydjluxunhvojp"
 
-# Auth via X-License header — sem JWT do Supabase
-[functions.clients-register]
+# Auth via X-Panel-Token header (validado contra secret PANEL_TOKEN)
+[functions.instance-register]
 verify_jwt = false
 
 [functions.heartbeat]
