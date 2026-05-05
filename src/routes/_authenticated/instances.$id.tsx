@@ -150,7 +150,7 @@ function LlmTab({ instanceId }: { instanceId: string }) {
                 <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatCurrencyBRL(v)} />
                 <RTooltip formatter={(v: number) => formatCurrencyBRL(v)} />
-                <Bar dataKey="cost" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cost" fill="var(--primary)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
