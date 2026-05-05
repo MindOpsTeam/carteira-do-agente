@@ -25,7 +25,6 @@ export const Route = createFileRoute("/_authenticated/instances/$id")({
 
 type Instance = {
   id: string;
-  tenant_id: string;
   hostname: string | null;
   status: string;
   last_heartbeat: string | null;
