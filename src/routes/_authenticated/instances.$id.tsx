@@ -47,7 +47,7 @@ function InstanceDetail() {
     (async () => {
       const { data } = await supabase
         .from("instances")
-        .select("id, tenant_id, hostname, status, last_heartbeat, agente_cfo_version, ingress_url")
+        .select("id, hostname, status, last_heartbeat, agente_cfo_version, ingress_url")
         .eq("id", id)
         .maybeSingle();
       setInst((data as Instance | null) ?? null);
