@@ -1,1 +1,18 @@
 project_id = "odhcfrgydjluxunhvojp"
+
+# Auth via X-License header — sem JWT do Supabase
+[functions.clients-register]
+verify_jwt = false
+
+[functions.heartbeat]
+verify_jwt = false
+
+[functions.event]
+verify_jwt = false
+
+[functions.llm-usage]
+verify_jwt = false
+
+# Auth via Supabase JWT do dono logado
+[functions.push-command]
+verify_jwt = true
