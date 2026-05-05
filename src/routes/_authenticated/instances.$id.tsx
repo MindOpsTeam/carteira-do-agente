@@ -25,7 +25,6 @@ export const Route = createFileRoute("/_authenticated/instances/$id")({
 
 type Instance = {
   id: string;
-  tenant_id: string;
   hostname: string | null;
   status: string;
   last_heartbeat: string | null;
@@ -48,7 +47,7 @@ function InstanceDetail() {
     (async () => {
       const { data } = await supabase
         .from("instances")
-        .select("id, tenant_id, hostname, status, last_heartbeat, agente_cfo_version, ingress_url")
+        .select("id, hostname, status, last_heartbeat, agente_cfo_version, ingress_url")
         .eq("id", id)
         .maybeSingle();
       setInst((data as Instance | null) ?? null);
@@ -255,7 +254,7 @@ function PushCommandDialog({ instance }: { instance: Instance }) {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("push-command", {
-        body: { tenant_id: instance.tenant_id, instance_id: instance.id, command },
+        body: { instance_id: instance.id, command },
       });
       if (error) throw error;
       toast.success("Comando enviado", {

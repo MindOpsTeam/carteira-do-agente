@@ -32,20 +32,16 @@ function LlmUsagePage() {
   useEffect(() => {
     (async () => {
       const period = currentPeriod();
-      const [usage, tenant] = await Promise.all([
-        supabase
-          .from("llm_usage")
-          .select("id, session_id, model, input_tokens, output_tokens, cost_brl, created_at")
-          .eq("period", period)
-          .order("cost_brl", { ascending: false })
-          .limit(500),
-        supabase.from("tenants").select("metadata").limit(1).maybeSingle(),
-      ]);
+      const usage = await supabase
+        .from("llm_usage")
+        .select("id, session_id, model, input_tokens, output_tokens, cost_brl, created_at")
+        .eq("period", period)
+        .order("cost_brl", { ascending: false })
+        .limit(500);
       const data = (usage.data as Row[] | null) ?? [];
       setRows(data);
       setTotal(data.reduce((s, r) => s + Number(r.cost_brl ?? 0), 0));
-      const meta = (tenant.data?.metadata ?? {}) as { llm_budget_brl?: number };
-      setBudget(Number(meta.llm_budget_brl ?? 0));
+      setBudget(Number(import.meta.env.VITE_LLM_BUDGET_BRL ?? 50));
       setLoading(false);
     })();
   }, []);

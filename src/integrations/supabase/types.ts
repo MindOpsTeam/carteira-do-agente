@@ -21,7 +21,6 @@ export type Database = {
           created_at: string
           id: number
           payload: Json
-          tenant_id: string | null
         }
         Insert: {
           action: string
@@ -29,7 +28,6 @@ export type Database = {
           created_at?: string
           id?: number
           payload?: Json
-          tenant_id?: string | null
         }
         Update: {
           action?: string
@@ -37,17 +35,8 @@ export type Database = {
           created_at?: string
           id?: number
           payload?: Json
-          tenant_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "audit_log_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       events: {
         Row: {
@@ -56,7 +45,6 @@ export type Database = {
           instance_id: string
           payload: Json
           severity: string
-          tenant_id: string
           type: string
         }
         Insert: {
@@ -65,7 +53,6 @@ export type Database = {
           instance_id: string
           payload?: Json
           severity?: string
-          tenant_id: string
           type: string
         }
         Update: {
@@ -74,7 +61,6 @@ export type Database = {
           instance_id?: string
           payload?: Json
           severity?: string
-          tenant_id?: string
           type?: string
         }
         Relationships: [
@@ -83,13 +69,6 @@ export type Database = {
             columns: ["instance_id"]
             isOneToOne: false
             referencedRelation: "instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -103,10 +82,8 @@ export type Database = {
           id: string
           ingress_url: string | null
           last_heartbeat: string | null
-          license_id: string
           openclaw_version: string | null
           status: string
-          tenant_id: string
         }
         Insert: {
           agente_cfo_version?: string | null
@@ -116,10 +93,8 @@ export type Database = {
           id?: string
           ingress_url?: string | null
           last_heartbeat?: string | null
-          license_id: string
           openclaw_version?: string | null
           status?: string
-          tenant_id: string
         }
         Update: {
           agente_cfo_version?: string | null
@@ -129,65 +104,10 @@ export type Database = {
           id?: string
           ingress_url?: string | null
           last_heartbeat?: string | null
-          license_id?: string
           openclaw_version?: string | null
           status?: string
-          tenant_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "instances_license_id_fkey"
-            columns: ["license_id"]
-            isOneToOne: false
-            referencedRelation: "licenses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      licenses: {
-        Row: {
-          created_at: string
-          expires_at: string | null
-          id: string
-          license_key: string
-          max_instances: number
-          status: string
-          tenant_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          license_key: string
-          max_instances?: number
-          status?: string
-          tenant_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          license_key?: string
-          max_instances?: number
-          status?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "licenses_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       llm_usage: {
         Row: {
@@ -200,7 +120,6 @@ export type Database = {
           output_tokens: number
           period: string
           session_id: string
-          tenant_id: string
         }
         Insert: {
           cost_brl?: number
@@ -212,7 +131,6 @@ export type Database = {
           output_tokens?: number
           period: string
           session_id: string
-          tenant_id: string
         }
         Update: {
           cost_brl?: number
@@ -224,7 +142,6 @@ export type Database = {
           output_tokens?: number
           period?: string
           session_id?: string
-          tenant_id?: string
         }
         Relationships: [
           {
@@ -232,13 +149,6 @@ export type Database = {
             columns: ["instance_id"]
             isOneToOne: false
             referencedRelation: "instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "llm_usage_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -251,7 +161,6 @@ export type Database = {
           id: number
           instance_id: string
           message: string | null
-          tenant_id: string
         }
         Insert: {
           command?: string | null
@@ -260,7 +169,6 @@ export type Database = {
           id?: number
           instance_id: string
           message?: string | null
-          tenant_id: string
         }
         Update: {
           command?: string | null
@@ -269,7 +177,6 @@ export type Database = {
           id?: number
           instance_id?: string
           message?: string | null
-          tenant_id?: string
         }
         Relationships: [
           {
@@ -277,72 +184,6 @@ export type Database = {
             columns: ["instance_id"]
             isOneToOne: false
             referencedRelation: "instances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "omie_errors_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenants: {
-        Row: {
-          created_at: string
-          email_dono: string
-          id: string
-          metadata: Json
-          nome: string
-          plano: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          email_dono: string
-          id?: string
-          metadata?: Json
-          nome: string
-          plano?: string
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          email_dono?: string
-          id?: string
-          metadata?: Json
-          nome?: string
-          plano?: string
-          status?: string
-        }
-        Relationships: []
-      }
-      tenants_users: {
-        Row: {
-          created_at: string
-          role: string
-          tenant_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          role?: string
-          tenant_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          role?: string
-          tenant_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenants_users_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -355,7 +196,6 @@ export type Database = {
           jid: string | null
           last_check: string | null
           status: string
-          tenant_id: string
         }
         Insert: {
           created_at?: string
@@ -364,7 +204,6 @@ export type Database = {
           jid?: string | null
           last_check?: string | null
           status: string
-          tenant_id: string
         }
         Update: {
           created_at?: string
@@ -373,7 +212,6 @@ export type Database = {
           jid?: string | null
           last_check?: string | null
           status?: string
-          tenant_id?: string
         }
         Relationships: [
           {
@@ -383,13 +221,6 @@ export type Database = {
             referencedRelation: "instances"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "whatsapp_status_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
@@ -397,7 +228,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_license_key: { Args: never; Returns: string }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
