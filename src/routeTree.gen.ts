@@ -12,6 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedLlmUsageRouteImport } from './routes/_authenticated/llm-usage'
+import { Route as AuthenticatedEventsRouteImport } from './routes/_authenticated/events'
+import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
+import { Route as AuthenticatedInstancesIdRouteImport } from './routes/_authenticated/instances.$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -27,27 +33,103 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedLlmUsageRoute = AuthenticatedLlmUsageRouteImport.update({
+  id: '/llm-usage',
+  path: '/llm-usage',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedEventsRoute = AuthenticatedEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedInstancesIndexRoute =
+  AuthenticatedInstancesIndexRouteImport.update({
+    id: '/instances/',
+    path: '/instances/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInstancesIdRoute =
+  AuthenticatedInstancesIdRouteImport.update({
+    id: '/instances/$id',
+    path: '/instances/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/audit': typeof AuthenticatedAuditRoute
+  '/events': typeof AuthenticatedEventsRoute
+  '/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/instances/$id': typeof AuthenticatedInstancesIdRoute
+  '/instances/': typeof AuthenticatedInstancesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/audit': typeof AuthenticatedAuditRoute
+  '/events': typeof AuthenticatedEventsRoute
+  '/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/instances/$id': typeof AuthenticatedInstancesIdRoute
+  '/instances': typeof AuthenticatedInstancesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/audit': typeof AuthenticatedAuditRoute
+  '/_authenticated/events': typeof AuthenticatedEventsRoute
+  '/_authenticated/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/instances/$id': typeof AuthenticatedInstancesIdRoute
+  '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/audit'
+    | '/events'
+    | '/llm-usage'
+    | '/settings'
+    | '/instances/$id'
+    | '/instances/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/'
-  id: '__root__' | '/_authenticated' | '/login' | '/_authenticated/'
+  to:
+    | '/login'
+    | '/audit'
+    | '/events'
+    | '/llm-usage'
+    | '/settings'
+    | '/'
+    | '/instances/$id'
+    | '/instances'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/audit'
+    | '/_authenticated/events'
+    | '/_authenticated/llm-usage'
+    | '/_authenticated/settings'
+    | '/_authenticated/'
+    | '/_authenticated/instances/$id'
+    | '/_authenticated/instances/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,15 +160,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/llm-usage': {
+      id: '/_authenticated/llm-usage'
+      path: '/llm-usage'
+      fullPath: '/llm-usage'
+      preLoaderRoute: typeof AuthenticatedLlmUsageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/events': {
+      id: '/_authenticated/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof AuthenticatedEventsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/audit': {
+      id: '/_authenticated/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthenticatedAuditRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/instances/': {
+      id: '/_authenticated/instances/'
+      path: '/instances'
+      fullPath: '/instances/'
+      preLoaderRoute: typeof AuthenticatedInstancesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/instances/$id': {
+      id: '/_authenticated/instances/$id'
+      path: '/instances/$id'
+      fullPath: '/instances/$id'
+      preLoaderRoute: typeof AuthenticatedInstancesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
+  AuthenticatedEventsRoute: typeof AuthenticatedEventsRoute
+  AuthenticatedLlmUsageRoute: typeof AuthenticatedLlmUsageRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedInstancesIdRoute: typeof AuthenticatedInstancesIdRoute
+  AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAuditRoute: AuthenticatedAuditRoute,
+  AuthenticatedEventsRoute: AuthenticatedEventsRoute,
+  AuthenticatedLlmUsageRoute: AuthenticatedLlmUsageRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedInstancesIdRoute: AuthenticatedInstancesIdRoute,
+  AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
