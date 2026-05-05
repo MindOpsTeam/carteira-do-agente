@@ -9,15 +9,12 @@ import { toast } from "sonner";
 
 export function AppHeader() {
   const navigate = useNavigate();
-  const [tenantName, setTenantName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
 
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setEmail(userData.user?.email ?? "");
-      const { data } = await supabase.from("tenants").select("nome").limit(1).maybeSingle();
-      if (data?.nome) setTenantName(data.nome);
     })();
   }, []);
 
@@ -32,7 +29,7 @@ export function AppHeader() {
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{tenantName || "—"}</div>
+        <div className="font-medium truncate">Agente CFO</div>
       </div>
       <div className="hidden sm:block text-sm text-muted-foreground truncate max-w-[200px]">{email}</div>
       <Button variant="ghost" size="sm" onClick={signOut}>
