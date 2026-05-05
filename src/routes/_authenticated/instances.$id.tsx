@@ -254,7 +254,7 @@ function PushCommandDialog({ instance }: { instance: Instance }) {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("push-command", {
-        body: { tenant_id: instance.tenant_id, instance_id: instance.id, command },
+        body: { instance_id: instance.id, command },
       });
       if (error) throw error;
       toast.success("Comando enviado", {
