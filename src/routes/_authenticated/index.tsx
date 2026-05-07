@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MonitorSmartphone, DollarSign, AlertTriangle } from "lucide-react";
+import { MonitorSmartphone, DollarSign, AlertTriangle, Copy, Check, ExternalLink } from "lucide-react";
 import { formatCurrencyBRL, formatRelative, currentPeriod } from "@/lib/format";
 import { SeverityBadge } from "@/lib/status";
 import { PageSkeleton, EmptyState } from "@/components/states";
@@ -22,8 +22,60 @@ type EventRow = {
   instances?: { hostname: string | null } | null;
 };
 
+const INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/MindOpsTeam/agente-cfo/main/install/setup.sh | bash";
+
+function OnboardingCard() {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(INSTALL_CMD).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Card className="max-w-lg w-full">
+        <CardHeader>
+          <CardTitle className="text-xl">Bem-vindo ao Marcos, seu CFO virtual</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Você acabou de criar seu painel. O próximo passo é instalar o agente na sua VPS.
+            Rode o comando abaixo e siga as instruções:
+          </p>
+          <div className="relative">
+            <pre className="bg-muted rounded px-3 py-2 text-xs font-mono overflow-x-auto pr-10 whitespace-pre-wrap break-all">
+              {INSTALL_CMD}
+            </pre>
+            <button
+              onClick={copy}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+              title="Copiar"
+            >
+              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Quando o agente registrar, esta tela vai mostrar o dashboard com saldo, eventos e custos.
+          </p>
+          <a
+            href="https://github.com/MindOpsTeam/agente-cfo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-primary underline hover:no-underline"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Ver README completo
+          </a>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function Dashboard() {
   const [loading, setLoading] = useState(true);
+  const [totalInstances, setTotalInstances] = useState<number | null>(null);
   const [activeInstances, setActiveInstances] = useState(0);
   const [monthCost, setMonthCost] = useState(0);
   const [criticalCount, setCriticalCount] = useState(0);
@@ -34,7 +86,8 @@ function Dashboard() {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const period = currentPeriod();
 
-      const [inst, cost, crit, ev] = await Promise.all([
+      const [allInst, inst, cost, crit, ev] = await Promise.all([
+        supabase.from("instances").select("id", { count: "exact", head: true }),
         supabase.from("instances").select("id", { count: "exact", head: true }).eq("status", "online"),
         supabase.from("llm_usage").select("cost_brl").eq("period", period),
         supabase
@@ -49,6 +102,7 @@ function Dashboard() {
           .limit(20),
       ]);
 
+      setTotalInstances(allInst.count ?? 0);
       setActiveInstances(inst.count ?? 0);
       setMonthCost((cost.data ?? []).reduce((s, r) => s + Number(r.cost_brl ?? 0), 0));
       setCriticalCount(crit.count ?? 0);
@@ -56,6 +110,10 @@ function Dashboard() {
       setLoading(false);
     })();
   }, []);
+
+  if (!loading && totalInstances === 0) {
+    return <OnboardingCard />;
+  }
 
   return (
     <div className="space-y-6">
