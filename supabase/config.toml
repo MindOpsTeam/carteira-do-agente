@@ -16,3 +16,9 @@ verify_jwt = false
 # Auth via Supabase JWT do dono logado
 [functions.push-command]
 verify_jwt = true
+
+[functions.bling-oauth-exchange]
+verify_jwt = true
+
+[functions.bling-push-tokens]
+verify_jwt = true
