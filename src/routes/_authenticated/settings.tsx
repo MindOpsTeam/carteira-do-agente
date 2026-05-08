@@ -42,6 +42,7 @@ function SettingsPage() {
   const [instance, setInstance] = useState<InstanceRow | null>(null);
   const [instanceLoading, setInstanceLoading] = useState(true);
   const [doctorLoading, setDoctorLoading] = useState(false);
+  const [lastChatAt, setLastChatAt] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
