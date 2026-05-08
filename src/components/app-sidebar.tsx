@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug } from "lucide-react";
+import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +13,7 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, exact: true },
+  { title: "Conversar", url: "/chat", icon: MessageSquare },
   { title: "Instâncias", url: "/instances", icon: MonitorSmartphone },
   { title: "Eventos", url: "/events", icon: ScrollText },
   { title: "Custo LLM", url: "/llm-usage", icon: DollarSign },
