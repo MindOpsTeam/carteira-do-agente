@@ -76,6 +76,7 @@ export type Database = {
       instances: {
         Row: {
           agente_cfo_version: string | null
+          connected_integrations: Json
           created_at: string
           hooks_token: string | null
           hostname: string | null
@@ -87,6 +88,7 @@ export type Database = {
         }
         Insert: {
           agente_cfo_version?: string | null
+          connected_integrations?: Json
           created_at?: string
           hooks_token?: string | null
           hostname?: string | null
@@ -98,6 +100,7 @@ export type Database = {
         }
         Update: {
           agente_cfo_version?: string | null
+          connected_integrations?: Json
           created_at?: string
           hooks_token?: string | null
           hostname?: string | null
