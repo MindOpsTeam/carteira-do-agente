@@ -22,3 +22,10 @@ verify_jwt = true
 
 [functions.bling-push-tokens]
 verify_jwt = true
+
+[functions.chat-send-message]
+verify_jwt = true
+
+# VPS → painel via X-Panel-Token
+[functions.chat-marcos-reply]
+verify_jwt = false

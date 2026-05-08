@@ -42,6 +42,7 @@ function SettingsPage() {
   const [instance, setInstance] = useState<InstanceRow | null>(null);
   const [instanceLoading, setInstanceLoading] = useState(true);
   const [doctorLoading, setDoctorLoading] = useState(false);
+  const [lastChatAt, setLastChatAt] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -61,6 +62,14 @@ function SettingsPage() {
 
       setInstance(instances ?? null);
       setInstanceLoading(false);
+
+      const { data: lastMsg } = await supabase
+        .from("chat_messages")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setLastChatAt(lastMsg?.created_at ?? null);
     })();
   }, []);
 
@@ -119,6 +128,14 @@ function SettingsPage() {
             <div className="text-xs text-muted-foreground">Último acesso</div>
             <div className="text-sm">
               {user?.last_sign_in_at ? formatRelative(user.last_sign_in_at) : "—"}
+            </div>
+          </div>
+          <div className="grid gap-1">
+            <div className="text-xs text-muted-foreground">Chat web</div>
+            <div className="text-sm">
+              {lastChatAt
+                ? `Ativo — última mensagem ${formatRelative(lastChatAt)}`
+                : "Sem mensagens ainda"}
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={signOut}>
