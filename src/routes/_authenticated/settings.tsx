@@ -130,6 +130,14 @@ function SettingsPage() {
               {user?.last_sign_in_at ? formatRelative(user.last_sign_in_at) : "—"}
             </div>
           </div>
+          <div className="grid gap-1">
+            <div className="text-xs text-muted-foreground">Chat web</div>
+            <div className="text-sm">
+              {lastChatAt
+                ? `Ativo — última mensagem ${formatRelative(lastChatAt)}`
+                : "Sem mensagens ainda"}
+            </div>
+          </div>
           <Button variant="outline" size="sm" onClick={signOut}>
             <LogOut className="h-4 w-4 mr-2" />
             Sair
