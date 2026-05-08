@@ -62,6 +62,14 @@ function SettingsPage() {
 
       setInstance(instances ?? null);
       setInstanceLoading(false);
+
+      const { data: lastMsg } = await supabase
+        .from("chat_messages")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setLastChatAt(lastMsg?.created_at ?? null);
     })();
   }, []);
 
