@@ -32,7 +32,7 @@ function renderContent(content: string) {
   // markdown leve: **bold**, `code`, listas
   const lines = content.split("\n");
   return lines.map((line, idx) => {
-    const parts: (string | JSX.Element)[] = [];
+    const parts: Array<string | React.ReactNode> = [];
     let remaining = line;
     let key = 0;
     const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
