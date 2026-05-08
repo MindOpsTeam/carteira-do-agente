@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: number
+          metadata: Json | null
+          role: string
+          status: string | null
+          thread_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: number
+          metadata?: Json | null
+          role: string
+          status?: string | null
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: number
+          metadata?: Json | null
+          role?: string
+          status?: string | null
+          thread_id?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string
