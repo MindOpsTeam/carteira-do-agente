@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { fetchOnboardingStatus } from "@/hooks/use-onboarding";
+import { OnboardingPendingBanner } from "@/components/onboarding-banner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonitorSmartphone, DollarSign, AlertTriangle, Copy, Check, ExternalLink } from "lucide-react";
@@ -74,12 +76,25 @@ function OnboardingCard() {
 }
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [totalInstances, setTotalInstances] = useState<number | null>(null);
   const [activeInstances, setActiveInstances] = useState(0);
   const [monthCost, setMonthCost] = useState(0);
   const [criticalCount, setCriticalCount] = useState(0);
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [onboardingPending, setOnboardingPending] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const status = await fetchOnboardingStatus();
+      if (!status.completed && !status.hasInstance) {
+        navigate({ to: "/onboarding" });
+        return;
+      }
+      setOnboardingPending(!status.completed);
+    })();
+  }, [navigate]);
 
   useEffect(() => {
     (async () => {
@@ -121,6 +136,8 @@ function Dashboard() {
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Visão geral do seu painel.</p>
       </div>
+
+      {onboardingPending && <OnboardingPendingBanner />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard

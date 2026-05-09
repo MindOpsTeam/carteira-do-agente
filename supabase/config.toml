@@ -29,3 +29,20 @@ verify_jwt = true
 # VPS → painel via X-Panel-Token
 [functions.chat-marcos-reply]
 verify_jwt = false
+
+# Onboarding wizard
+[functions.onboarding-validate-anthropic-key]
+verify_jwt = true
+
+[functions.onboarding-issue-token]
+verify_jwt = true
+
+[functions.onboarding-test-erp-connection]
+verify_jwt = true
+
+[functions.onboarding-test-crm-connection]
+verify_jwt = true
+
+# Público — script de instalação chamado pela VPS via curl
+[functions.setup-installer]
+verify_jwt = false

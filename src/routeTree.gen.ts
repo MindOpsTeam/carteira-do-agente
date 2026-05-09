@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
@@ -23,6 +24,11 @@ import { Route as AuthenticatedIntegrationsBlingRouteImport } from './routes/_au
 import { Route as AuthenticatedInstancesIdRouteImport } from './routes/_authenticated/instances.$id'
 import { Route as AuthenticatedIntegrationsBlingCallbackRouteImport } from './routes/_authenticated/integrations.bling.callback'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -96,6 +102,7 @@ const AuthenticatedIntegrationsBlingCallbackRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/chat': typeof AuthenticatedChatRoute
   '/events': typeof AuthenticatedEventsRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/chat': typeof AuthenticatedChatRoute
   '/events': typeof AuthenticatedEventsRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/events': typeof AuthenticatedEventsRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/onboarding'
     | '/audit'
     | '/chat'
     | '/events'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/onboarding'
     | '/audit'
     | '/chat'
     | '/events'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/onboarding'
     | '/_authenticated/audit'
     | '/_authenticated/chat'
     | '/_authenticated/events'
@@ -186,10 +198,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -333,16 +353,8 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
