@@ -76,12 +76,25 @@ function OnboardingCard() {
 }
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [totalInstances, setTotalInstances] = useState<number | null>(null);
   const [activeInstances, setActiveInstances] = useState(0);
   const [monthCost, setMonthCost] = useState(0);
   const [criticalCount, setCriticalCount] = useState(0);
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [onboardingPending, setOnboardingPending] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const status = await fetchOnboardingStatus();
+      if (!status.completed && !status.hasInstance) {
+        navigate({ to: "/onboarding" });
+        return;
+      }
+      setOnboardingPending(!status.completed);
+    })();
+  }, [navigate]);
 
   useEffect(() => {
     (async () => {
