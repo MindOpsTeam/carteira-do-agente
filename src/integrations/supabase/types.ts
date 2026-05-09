@@ -103,6 +103,33 @@ export type Database = {
           },
         ]
       }
+      installer_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          metadata: Json
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          metadata?: Json
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          metadata?: Json
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       instances: {
         Row: {
           agente_cfo_version: string | null
@@ -220,6 +247,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_onboarding: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          data?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       whatsapp_status: {
         Row: {
