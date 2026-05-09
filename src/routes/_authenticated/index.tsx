@@ -137,6 +137,8 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">Visão geral do seu painel.</p>
       </div>
 
+      {onboardingPending && <OnboardingPendingBanner />}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Instâncias ativas"
