@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -40,6 +41,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -156,6 +162,7 @@ const AuthenticatedIntegrationsBlingCallbackRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/audit': typeof AuthenticatedAuditRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/integrations/nuvemshop/callback': typeof AuthenticatedIntegrationsNuvemshopCallbackRoute
 }
 export interface FileRoutesByTo {
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/audit': typeof AuthenticatedAuditRoute
@@ -203,6 +211,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/install'
     | '/login'
     | '/onboarding'
     | '/audit'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/integrations/nuvemshop/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/install'
     | '/login'
     | '/onboarding'
     | '/audit'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/install'
     | '/login'
     | '/onboarding'
     | '/_authenticated/audit'
@@ -300,6 +312,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  InstallRoute: typeof InstallRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
 }
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -569,18 +589,10 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  InstallRoute: InstallRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
