@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedLlmUsageRouteImport } from './routes/_authenticated/llm-usage'
 import { Route as AuthenticatedEventsRouteImport } from './routes/_authenticated/events'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
@@ -46,6 +47,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedLlmUsageRoute = AuthenticatedLlmUsageRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/events': typeof AuthenticatedEventsRoute
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/events': typeof AuthenticatedEventsRoute
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/events': typeof AuthenticatedEventsRoute
   '/_authenticated/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/instances/$id': typeof AuthenticatedInstancesIdRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/events'
     | '/llm-usage'
+    | '/reports'
     | '/settings'
     | '/instances/$id'
     | '/integrations/bling'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/events'
     | '/llm-usage'
+    | '/reports'
     | '/settings'
     | '/'
     | '/instances/$id'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/events'
     | '/_authenticated/llm-usage'
+    | '/_authenticated/reports'
     | '/_authenticated/settings'
     | '/_authenticated/'
     | '/_authenticated/instances/$id'
@@ -236,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/llm-usage': {
@@ -324,6 +343,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedEventsRoute: typeof AuthenticatedEventsRoute
   AuthenticatedLlmUsageRoute: typeof AuthenticatedLlmUsageRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedInstancesIdRoute: typeof AuthenticatedInstancesIdRoute
@@ -337,6 +357,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedEventsRoute: AuthenticatedEventsRoute,
   AuthenticatedLlmUsageRoute: AuthenticatedLlmUsageRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedInstancesIdRoute: AuthenticatedInstancesIdRoute,
