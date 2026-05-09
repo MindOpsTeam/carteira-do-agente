@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { fetchOnboardingStatus } from "@/hooks/use-onboarding";
+import { OnboardingPendingBanner } from "@/components/onboarding-banner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonitorSmartphone, DollarSign, AlertTriangle, Copy, Check, ExternalLink } from "lucide-react";
