@@ -21,6 +21,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_authenticated/integrations.index'
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
+import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authenticated/settings_.rules'
 import { Route as AuthenticatedIntegrationsBlingRouteImport } from './routes/_authenticated/integrations.bling'
 import { Route as AuthenticatedInstancesIdRouteImport } from './routes/_authenticated/instances.$id'
 import { Route as AuthenticatedIntegrationsBlingCallbackRouteImport } from './routes/_authenticated/integrations.bling.callback'
@@ -86,6 +87,12 @@ const AuthenticatedInstancesIndexRoute =
     path: '/instances/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSettingsRulesRoute =
+  AuthenticatedSettingsRulesRouteImport.update({
+    id: '/settings_/rules',
+    path: '/settings/rules',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIntegrationsBlingRoute =
   AuthenticatedIntegrationsBlingRouteImport.update({
     id: '/integrations/bling',
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
+  '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
   '/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -133,6 +141,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
+  '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
   '/integrations': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -151,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/_authenticated/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
+  '/_authenticated/settings_/rules': typeof AuthenticatedSettingsRulesRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
   '/_authenticated/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/_authenticated/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/instances/$id'
     | '/integrations/bling'
+    | '/settings/rules'
     | '/instances/'
     | '/integrations/'
     | '/integrations/bling/callback'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/instances/$id'
     | '/integrations/bling'
+    | '/settings/rules'
     | '/instances'
     | '/integrations'
     | '/integrations/bling/callback'
@@ -202,6 +214,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/instances/$id'
     | '/_authenticated/integrations/bling'
+    | '/_authenticated/settings_/rules'
     | '/_authenticated/instances/'
     | '/_authenticated/integrations/'
     | '/_authenticated/integrations/bling/callback'
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstancesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings_/rules': {
+      id: '/_authenticated/settings_/rules'
+      path: '/settings/rules'
+      fullPath: '/settings/rules'
+      preLoaderRoute: typeof AuthenticatedSettingsRulesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/integrations/bling': {
       id: '/_authenticated/integrations/bling'
       path: '/integrations/bling'
@@ -348,6 +368,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedInstancesIdRoute: typeof AuthenticatedInstancesIdRoute
   AuthenticatedIntegrationsBlingRoute: typeof AuthenticatedIntegrationsBlingRouteWithChildren
+  AuthenticatedSettingsRulesRoute: typeof AuthenticatedSettingsRulesRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
   AuthenticatedIntegrationsIndexRoute: typeof AuthenticatedIntegrationsIndexRoute
 }
@@ -363,6 +384,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInstancesIdRoute: AuthenticatedInstancesIdRoute,
   AuthenticatedIntegrationsBlingRoute:
     AuthenticatedIntegrationsBlingRouteWithChildren,
+  AuthenticatedSettingsRulesRoute: AuthenticatedSettingsRulesRoute,
   AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
   AuthenticatedIntegrationsIndexRoute: AuthenticatedIntegrationsIndexRoute,
 }

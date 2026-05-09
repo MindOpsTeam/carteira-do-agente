@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.reports-pipeline-projection]
 verify_jwt = true
+
+[functions.update-proactive-rules]
+verify_jwt = true
