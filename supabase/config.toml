@@ -62,3 +62,15 @@ verify_jwt = true
 
 [functions.contaazul-push-tokens]
 verify_jwt = true
+
+[functions.mercado-livre-oauth-exchange]
+verify_jwt = true
+
+[functions.mercado-livre-push-tokens]
+verify_jwt = true
+
+[functions.nuvemshop-oauth-exchange]
+verify_jwt = true
+
+[functions.nuvemshop-push-tokens]
+verify_jwt = true

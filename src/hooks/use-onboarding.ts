@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type ErpName = "omie" | "bling" | "contaazul" | "tiny" | "granatum" | "vhsys" | "nibo";
 export type CrmName = "hubspot" | "rdstation" | "piperun" | "pipedrive";
+export type BillingName = "asaas" | "iugu";
+export type EcommerceName = "mercado-livre" | "nuvemshop";
 
 export type OnboardingData = {
   anthropic_key?: string;
@@ -10,6 +12,8 @@ export type OnboardingData = {
   whatsapp_phone?: string;
   erp?: { name: ErpName | "none"; credentials?: Record<string, string>; validated?: boolean };
   crm?: { name: CrmName | "none"; credentials?: Record<string, string>; validated?: boolean };
+  billing?: { name: BillingName | "none"; credentials?: Record<string, string> };
+  ecommerce?: { name: EcommerceName | "none" };
   installer_token?: string;
   installer_url?: string;
   vps_connected_instance_id?: string;

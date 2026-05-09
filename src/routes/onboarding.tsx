@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOnboardingState, type ErpName, type CrmName } from "@/hooks/use-onboarding";
+import { useOnboardingState, type ErpName, type CrmName, type BillingName, type EcommerceName } from "@/hooks/use-onboarding";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   ArrowLeft, ArrowRight, Briefcase, CheckCircle2, Copy, ExternalLink,
   Loader2, MessageSquare, Phone, Sparkles, KeyRound, Plug, Server,
   PartyPopper, BarChart3, Settings as SettingsIcon, ChevronRight,
+  CreditCard, ShoppingCart,
 } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
 });
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 10;
 
 function OnboardingPage() {
   const { state, loaded, updateData, goTo, complete } = useOnboardingState();
@@ -73,10 +74,12 @@ function OnboardingPage() {
           {step === 2 && <Step2Anthropic data={state.data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 3 && <Step3WhatsApp data={state.data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 4 && <Step4Erp data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 5 && <Step5Crm data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 6 && <Step6Vps data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 7 && <Step7WhatsAppPair data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 8 && <Step8Done onComplete={complete} />}
+          {step === 5 && <Step5Billing data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 6 && <Step5Crm data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 7 && <Step7Ecommerce data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 8 && <Step6Vps data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 9 && <Step7WhatsAppPair data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 10 && <Step8Done onComplete={complete} />}
         </div>
       </main>
 
@@ -715,6 +718,154 @@ function Step8Done({ onComplete }: { onComplete: () => void }) {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------- Step 4b: Plataforma de cobrança ----------------
+const BILLING_OPTIONS: Array<{ id: BillingName | "none"; name: string; helpUrl?: string; tokenLabel?: string }> = [
+  { id: "asaas", name: "Asaas", helpUrl: "https://docs.asaas.com/", tokenLabel: "API Key" },
+  { id: "iugu", name: "Iugu", helpUrl: "https://dev.iugu.com/", tokenLabel: "API Token" },
+  { id: "none", name: "Pular" },
+];
+
+function Step5Billing({ data, updateData, onNext, onBack }: any) {
+  const [selected, setSelected] = useState<BillingName | "none" | null>(data.billing?.name ?? null);
+  const [token, setToken] = useState<string>(data.billing?.credentials?.api_token ?? "");
+  const opt = BILLING_OPTIONS.find((o) => o.id === selected);
+
+  const handleNext = () => {
+    if (!selected || selected === "none") {
+      updateData({ billing: { name: "none" } });
+      onNext();
+      return;
+    }
+    if (!token.trim()) { toast.error("Cole o token primeiro"); return; }
+    updateData({ billing: { name: selected, credentials: { api_token: token.trim() } } });
+    toast.success("Plataforma de cobrança configurada");
+    onNext();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2 mb-1">
+          <CreditCard className="h-5 w-5 text-primary" />
+          <CardTitle>Plataforma de cobrança (opcional)</CardTitle>
+        </div>
+        <CardDescription>Cobra clientes via boleto/PIX/cartão? Marcos pode acompanhar inadimplência.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-2">
+          {BILLING_OPTIONS.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => { setSelected(o.id); setToken(""); }}
+              className={`rounded-lg border p-3 text-sm text-left transition-colors ${
+                selected === o.id ? "border-primary bg-primary/5 font-medium" : "hover:bg-muted"
+              }`}
+            >
+              {o.name}
+            </button>
+          ))}
+        </div>
+
+        {opt && opt.id !== "none" && (
+          <div className="space-y-3 pt-2 animate-in fade-in duration-200">
+            {opt.helpUrl && (
+              <a href={opt.helpUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                Como obter o token <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="billing-token">{opt.tokenLabel}</Label>
+              <Input
+                id="billing-token"
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O token será enviado pra sua VPS quando você terminar a etapa 8 (instalação).
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Button>
+          <Button onClick={handleNext} disabled={!selected} className="flex-1">
+            {selected === "none" ? "Pular" : "Continuar"} <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------- Step 5b: E-commerce ----------------
+const ECOMMERCE_OPTIONS: Array<{ id: EcommerceName | "none"; name: string; href?: string }> = [
+  { id: "mercado-livre", name: "Mercado Livre", href: "/integrations/mercado-livre" },
+  { id: "nuvemshop", name: "Nuvemshop", href: "/integrations/nuvemshop" },
+  { id: "none", name: "Pular" },
+];
+
+function Step7Ecommerce({ data, updateData, onNext, onBack }: any) {
+  const [selected, setSelected] = useState<EcommerceName | "none" | null>(data.ecommerce?.name ?? null);
+  const opt = ECOMMERCE_OPTIONS.find((o) => o.id === selected);
+
+  const handleNext = () => {
+    if (!selected || selected === "none") {
+      updateData({ ecommerce: { name: "none" } });
+      onNext();
+      return;
+    }
+    updateData({ ecommerce: { name: selected } });
+    if (opt?.href) {
+      toast.info("Termine o OAuth e volte aqui pra continuar.");
+      window.location.href = opt.href;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2 mb-1">
+          <ShoppingCart className="h-5 w-5 text-primary" />
+          <CardTitle>E-commerce (opcional)</CardTitle>
+        </div>
+        <CardDescription>Vende online? Marcos lê pedidos e estoque do seu canal.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-2">
+          {ECOMMERCE_OPTIONS.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => setSelected(o.id)}
+              className={`rounded-lg border p-3 text-sm text-left transition-colors ${
+                selected === o.id ? "border-primary bg-primary/5 font-medium" : "hover:bg-muted"
+              }`}
+            >
+              {o.name}
+            </button>
+          ))}
+        </div>
+
+        {selected && selected !== "none" && (
+          <p className="text-xs text-muted-foreground">
+            OAuth — você será redirecionado pra autorizar com {opt?.name}.
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Button>
+          <Button onClick={handleNext} disabled={!selected} className="flex-1">
+            {selected === "none" ? "Pular" : `Ir para ${opt?.name}`} <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
