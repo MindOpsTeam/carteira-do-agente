@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOnboardingState, type ErpName, type CrmName } from "@/hooks/use-onboarding";
+import { useOnboardingState, type ErpName, type CrmName, type BillingName, type EcommerceName } from "@/hooks/use-onboarding";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   ArrowLeft, ArrowRight, Briefcase, CheckCircle2, Copy, ExternalLink,
   Loader2, MessageSquare, Phone, Sparkles, KeyRound, Plug, Server,
   PartyPopper, BarChart3, Settings as SettingsIcon, ChevronRight,
+  CreditCard, ShoppingCart,
 } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
 });
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 10;
 
 function OnboardingPage() {
   const { state, loaded, updateData, goTo, complete } = useOnboardingState();
@@ -73,10 +74,12 @@ function OnboardingPage() {
           {step === 2 && <Step2Anthropic data={state.data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 3 && <Step3WhatsApp data={state.data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 4 && <Step4Erp data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 5 && <Step5Crm data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 6 && <Step6Vps data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 7 && <Step7WhatsAppPair data={state.data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 8 && <Step8Done onComplete={complete} />}
+          {step === 5 && <Step5Billing data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 6 && <Step5Crm data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 7 && <Step7Ecommerce data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 8 && <Step6Vps data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 9 && <Step7WhatsAppPair data={state.data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 10 && <Step8Done onComplete={complete} />}
         </div>
       </main>
 
