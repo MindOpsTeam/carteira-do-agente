@@ -22,7 +22,7 @@ const items = [
   { title: "Auditoria", url: "/audit", icon: ShieldCheck },
   { title: "Integrações", url: "/integrations", icon: Plug },
   { title: "Regras Proativas", url: "/settings/rules", icon: Bell },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: "Configurações", url: "/settings", icon: Settings, exact: true },
 ];
 
 export function AppSidebar() {
