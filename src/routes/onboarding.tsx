@@ -256,6 +256,7 @@ const ERP_OPTIONS: Array<{ id: ErpName | "none"; name: string; fields?: Array<{ 
     { key: "app_secret", label: "App Secret", type: "password" },
   ]},
   { id: "bling", name: "Bling (OAuth)" },
+  { id: "contaazul", name: "ContaAzul (OAuth)" },
   { id: "tiny", name: "Tiny ERP", helpUrl: "https://tiny.com.br/ajuda/api", fields: [
     { key: "token", label: "Token API", type: "password" },
   ]},
@@ -285,6 +286,12 @@ function Step4Erp({ data, updateData, onNext, onBack }: any) {
       updateData({ erp: { name: "bling" } });
       toast.info("Termine o OAuth do Bling e volte aqui.");
       window.location.href = "/integrations/bling";
+      return;
+    }
+    if (selected === "contaazul") {
+      updateData({ erp: { name: "contaazul" } });
+      toast.info("Termine o OAuth do ContaAzul e volte aqui.");
+      window.location.href = "/integrations/contaazul";
       return;
     }
     setValidating(true);
@@ -355,12 +362,17 @@ function Step4Erp({ data, updateData, onNext, onBack }: any) {
             Você será redirecionado para a tela do Bling. Volte aqui depois pra continuar.
           </p>
         )}
+        {selected === "contaazul" && (
+          <p className="text-xs text-muted-foreground">
+            OAuth — você será redirecionado para a página de autorização do ContaAzul.
+          </p>
+        )}
 
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Button>
           <Button onClick={handleNext} disabled={!selected || validating} className="flex-1">
             {validating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {selected === "none" ? "Pular" : selected === "bling" ? "Ir para Bling" : "Validar e continuar"}
+            {selected === "none" ? "Pular" : selected === "bling" ? "Ir para Bling" : selected === "contaazul" ? "Ir para ContaAzul" : "Validar e continuar"}
             {!validating && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>
