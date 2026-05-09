@@ -56,3 +56,9 @@ verify_jwt = true
 
 [functions.update-proactive-rules]
 verify_jwt = true
+
+[functions.contaazul-oauth-exchange]
+verify_jwt = true
+
+[functions.contaazul-push-tokens]
+verify_jwt = true

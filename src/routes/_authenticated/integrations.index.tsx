@@ -22,7 +22,9 @@ type IntegrationDef = {
 
 const INTEGRATIONS: IntegrationDef[] = [
   { key: "bling", name: "Bling", description: "ERP e e-commerce — fluxo de caixa, pedidos, NF-e.", managed: true, href: "/integrations/bling" },
+  { key: "contaazul", name: "ContaAzul", description: "Gestão financeira — fluxo de caixa, contas a pagar/receber.", managed: true, href: "/integrations/contaazul" },
   { key: "omie", name: "Omie", description: "ERP financeiro e contábil.", managed: false },
+  { key: "pipedrive", name: "Pipedrive", description: "CRM de vendas — pipeline e previsão de receita.", managed: false },
   { key: "tiny", name: "Tiny", description: "ERP para e-commerce.", managed: false },
   { key: "granatum", name: "Granatum", description: "Gestão financeira para PMEs.", managed: false },
   { key: "vhsys", name: "VHSYS", description: "ERP modular online.", managed: false },
