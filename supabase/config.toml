@@ -46,3 +46,10 @@ verify_jwt = true
 # Público — script de instalação chamado pela VPS via curl
 [functions.setup-installer]
 verify_jwt = false
+
+# Relatórios (pedem ao agente projeções via push-command)
+[functions.reports-cash-projection]
+verify_jwt = true
+
+[functions.reports-pipeline-projection]
+verify_jwt = true
