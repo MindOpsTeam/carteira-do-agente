@@ -15,6 +15,7 @@ const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, exact: true },
   { title: "Configurar", url: "/onboarding", icon: Sparkles },
   { title: "Conversar", url: "/chat", icon: MessageSquare },
+  { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Instâncias", url: "/instances", icon: MonitorSmartphone },
   { title: "Eventos", url: "/events", icon: ScrollText },
   { title: "Custo LLM", url: "/llm-usage", icon: DollarSign },
