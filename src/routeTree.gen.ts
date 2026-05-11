@@ -23,6 +23,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_authenticated/integrations.index'
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
+import { Route as AuthenticatedAutomationsIndexRouteImport } from './routes/_authenticated/automations.index'
 import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authenticated/settings_.rules'
 import { Route as AuthenticatedIntegrationsNuvemshopRouteImport } from './routes/_authenticated/integrations.nuvemshop'
 import { Route as AuthenticatedIntegrationsMercadoLivreRouteImport } from './routes/_authenticated/integrations.mercado-livre'
@@ -105,6 +106,12 @@ const AuthenticatedInstancesIndexRoute =
     path: '/instances/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAutomationsIndexRoute =
+  AuthenticatedAutomationsIndexRouteImport.update({
+    id: '/automations/',
+    path: '/automations/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSettingsRulesRoute =
   AuthenticatedSettingsRulesRouteImport.update({
     id: '/settings_/rules',
@@ -184,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
+  '/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
   '/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -209,6 +217,7 @@ export interface FileRoutesByTo {
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
+  '/automations': typeof AuthenticatedAutomationsIndexRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
   '/integrations': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -236,6 +245,7 @@ export interface FileRoutesById {
   '/_authenticated/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/_authenticated/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/_authenticated/settings_/rules': typeof AuthenticatedSettingsRulesRoute
+  '/_authenticated/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
   '/_authenticated/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/_authenticated/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
     | '/settings/rules'
+    | '/automations/'
     | '/instances/'
     | '/integrations/'
     | '/integrations/bling/callback'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
     | '/settings/rules'
+    | '/automations'
     | '/instances'
     | '/integrations'
     | '/integrations/bling/callback'
@@ -314,6 +326,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integrations/mercado-livre'
     | '/_authenticated/integrations/nuvemshop'
     | '/_authenticated/settings_/rules'
+    | '/_authenticated/automations/'
     | '/_authenticated/instances/'
     | '/_authenticated/integrations/'
     | '/_authenticated/integrations/bling/callback'
@@ -427,6 +440,13 @@ declare module '@tanstack/react-router' {
       path: '/instances'
       fullPath: '/instances/'
       preLoaderRoute: typeof AuthenticatedInstancesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/automations/': {
+      id: '/_authenticated/automations/'
+      path: '/automations'
+      fullPath: '/automations/'
+      preLoaderRoute: typeof AuthenticatedAutomationsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings_/rules': {
@@ -577,6 +597,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegrationsMercadoLivreRoute: typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   AuthenticatedIntegrationsNuvemshopRoute: typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   AuthenticatedSettingsRulesRoute: typeof AuthenticatedSettingsRulesRoute
+  AuthenticatedAutomationsIndexRoute: typeof AuthenticatedAutomationsIndexRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
   AuthenticatedIntegrationsIndexRoute: typeof AuthenticatedIntegrationsIndexRoute
 }
@@ -600,6 +621,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIntegrationsNuvemshopRoute:
     AuthenticatedIntegrationsNuvemshopRouteWithChildren,
   AuthenticatedSettingsRulesRoute: AuthenticatedSettingsRulesRoute,
+  AuthenticatedAutomationsIndexRoute: AuthenticatedAutomationsIndexRoute,
   AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
   AuthenticatedIntegrationsIndexRoute: AuthenticatedIntegrationsIndexRoute,
 }
