@@ -74,3 +74,14 @@ verify_jwt = true
 
 [functions.nuvemshop-push-tokens]
 verify_jwt = true
+
+# Comando Central (Sprint 16)
+[functions.dashboard-snapshot]
+verify_jwt = true
+
+[functions.simulate-scenario]
+verify_jwt = true
+
+# VPS → painel via X-Panel-Token + X-Hooks-Token
+[functions.dashboard-publish-insights]
+verify_jwt = false
