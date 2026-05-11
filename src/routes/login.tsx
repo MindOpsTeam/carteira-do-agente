@@ -1,3 +1,4 @@
+// Login: email + password via signInWithPassword (no OTP). Rebuild marker.
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
