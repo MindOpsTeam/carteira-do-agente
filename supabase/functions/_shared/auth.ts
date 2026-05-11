@@ -1,3 +1,4 @@
+// cors-rebuild: force redeploy all functions importing _shared/auth.ts (full CORS headers)
 /**
  * _shared/auth.ts
  * Helpers de autenticação para edge functions do Agente CFO (single-tenant).
