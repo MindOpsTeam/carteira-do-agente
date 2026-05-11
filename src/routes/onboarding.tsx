@@ -137,11 +137,39 @@ function Step2Anthropic({ data, updateData, onNext, onBack }: any) {
     if (!key.startsWith("sk-ant-")) { setError("Chave deve começar com sk-ant-"); return; }
     setValidating(true);
     try {
-      const { data: r, error: e } = await supabase.functions.invoke("onboarding-validate-anthropic-key", {
-        body: { key },
+      // Refresca a session antes de chamar (cobre JWT vencido após espera no wizard)
+      const { data: sessData } = await supabase.auth.getSession();
+      let token = sessData.session?.access_token;
+      if (!token) {
+        const refreshed = await supabase.auth.refreshSession();
+        token = refreshed.data.session?.access_token;
+      }
+      if (!token) {
+        setError("Sessão expirou — faça login novamente");
+        return;
+      }
+
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/onboarding-validate-anthropic-key`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "apikey": SUPABASE_ANON,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ key }),
       });
-      if (e) throw e;
-      if (!r?.valid) { setError(r?.error ?? "Chave inválida"); return; }
+
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok && !r?.valid) {
+        setError(r?.error ?? r?.message ?? `Erro HTTP ${res.status}`);
+        return;
+      }
+      if (!r?.valid) {
+        setError(r?.error ?? "Chave inválida");
+        return;
+      }
       updateData({ anthropic_key: key, anthropic_validated: true });
       toast.success("Chave validada com sucesso");
       onNext();
