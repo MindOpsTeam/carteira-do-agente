@@ -1,3 +1,4 @@
+// rebuild marker: onboarding-validate-key fetch-direct v2
 // Onboarding: Etapa 2 usa fetch direto p/ onboarding-validate-anthropic-key (no functions.invoke). Rebuild marker.
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
