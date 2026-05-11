@@ -52,7 +52,7 @@ function LoginPage() {
 
   const verifyCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (code.length !== 6) return;
+    if (code.length !== 8) return;
     setLoading(true);
     const { error } = await supabase.auth.verifyOtp({
       email,
@@ -100,12 +100,12 @@ function LoginPage() {
           ) : (
             <form onSubmit={verifyCode} className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                Enviamos um código de 6 dígitos para
+                Enviamos um código de 8 dígitos para
                 <br />
                 <span className="font-medium text-foreground">{email}</span>
               </p>
               <div className="flex justify-center">
-                <InputOTP maxLength={6} value={code} onChange={setCode} disabled={loading}>
+                <InputOTP maxLength={8} value={code} onChange={setCode} disabled={loading}>
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
@@ -113,10 +113,12 @@ function LoginPage() {
                     <InputOTPSlot index={3} />
                     <InputOTPSlot index={4} />
                     <InputOTPSlot index={5} />
+                    <InputOTPSlot index={6} />
+                    <InputOTPSlot index={7} />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+              <Button type="submit" className="w-full" disabled={loading || code.length !== 8}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Entrar
               </Button>
