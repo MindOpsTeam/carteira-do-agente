@@ -68,6 +68,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_snapshots: {
+        Row: {
+          created_at: string
+          data: Json
+          expires_at: string
+          id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          expires_at?: string
+          id?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string
@@ -102,6 +126,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      goals: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          metric: string
+          notes: string | null
+          operator: string
+          period: string
+          target_value: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          metric: string
+          notes?: string | null
+          operator?: string
+          period?: string
+          target_value: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          metric?: string
+          notes?: string | null
+          operator?: string
+          period?: string
+          target_value?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       installer_tokens: {
         Row: {
@@ -213,6 +276,39 @@ export type Database = {
           },
         ]
       }
+      marcos_insights: {
+        Row: {
+          created_at: string
+          data: Json
+          expires_at: string
+          id: number
+          section: string
+          severity: string
+          text: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: number
+          section: string
+          severity?: string
+          text: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: number
+          section?: string
+          severity?: string
+          text?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       omie_errors: {
         Row: {
           command: string | null
@@ -247,6 +343,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scenarios: {
+        Row: {
+          created_at: string
+          id: string
+          inputs: Json
+          name: string
+          result: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inputs?: Json
+          name: string
+          result?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inputs?: Json
+          name?: string
+          result?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_onboarding: {
         Row: {
