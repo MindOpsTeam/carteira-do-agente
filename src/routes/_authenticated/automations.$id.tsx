@@ -362,7 +362,7 @@ type BuilderProps = {
 };
 
 function BuilderColumn(p: BuilderProps) {
-  const { draft, update, updateTrigger, addAction, moveAction, removeAction, patchAction,
+  const { draft: d, update, updateTrigger, addAction, moveAction, removeAction, patchAction,
     addCondition, patchCondition, removeCondition, testResult } = p;
   const [actionPickerOpen, setActionPickerOpen] = useState(false);
 
