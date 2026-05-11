@@ -35,10 +35,20 @@ function LoginPage() {
 
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!email) return;
+    // Lê direto do form pra cobrir autofill que não dispara onChange
+    const formEmail =
+      email ||
+      (typeof document !== "undefined"
+        ? (document.getElementById("email") as HTMLInputElement | null)?.value || ""
+        : "");
+    if (!formEmail) {
+      toast.error("Digite seu email");
+      return;
+    }
+    if (!email && formEmail) setEmail(formEmail);
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: formEmail,
       options: { shouldCreateUser: true },
     });
     setLoading(false);
@@ -92,7 +102,7 @@ function LoginPage() {
                   disabled={loading}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading || !email}>
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Enviar código
               </Button>
