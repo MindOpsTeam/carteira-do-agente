@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Loader2 } from "lucide-react";
@@ -28,54 +27,87 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const sendCode = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    // Lê direto do form pra cobrir autofill que não dispara onChange
-    const formEmail =
-      email ||
-      (typeof document !== "undefined"
-        ? (document.getElementById("email") as HTMLInputElement | null)?.value || ""
-        : "");
-    if (!formEmail) {
-      toast.error("Digite seu email");
-      return;
-    }
-    if (!email && formEmail) setEmail(formEmail);
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: formEmail,
-      options: { shouldCreateUser: true },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Código enviado para seu email");
-    setStep("otp");
+  const readField = (id: string, fallback: string) => {
+    if (typeof document === "undefined") return fallback;
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    return el?.value || fallback;
   };
 
-  const verifyCode = async (e?: React.FormEvent) => {
+  const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (code.length !== 8) return;
-    setLoading(true);
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: "email",
-    });
-    setLoading(false);
-    if (error) {
-      toast.error("Código inválido ou expirado");
+    const finalEmail = email || readField("email", "");
+    const finalPassword = password || readField("password", "");
+
+    if (!finalEmail || !finalPassword) {
+      toast.error("Preencha email e senha");
       return;
     }
-    toast.success("Autenticado com sucesso");
-    navigate({ to: "/" });
+    if (finalPassword.length < 6) {
+      toast.error("Senha precisa de pelo menos 6 caracteres");
+      return;
+    }
+
+    setLoading(true);
+
+    // Tenta login direto
+    const signInResult = await supabase.auth.signInWithPassword({
+      email: finalEmail,
+      password: finalPassword,
+    });
+
+    if (signInResult.data.session) {
+      setLoading(false);
+      toast.success("Entrou");
+      navigate({ to: "/" });
+      return;
+    }
+
+    // Se falhou por "Invalid login credentials", tenta criar conta
+    const msg = signInResult.error?.message || "";
+    const isInvalidCreds = /invalid login credentials/i.test(msg);
+
+    if (!isInvalidCreds) {
+      setLoading(false);
+      toast.error(msg || "Falha ao entrar");
+      return;
+    }
+
+    // Cria conta nova
+    const signUpResult = await supabase.auth.signUp({
+      email: finalEmail,
+      password: finalPassword,
+    });
+
+    if (signUpResult.error) {
+      setLoading(false);
+      toast.error(signUpResult.error.message);
+      return;
+    }
+
+    // Se já criou com session ativa (mailer_autoconfirm=true), entra
+    if (signUpResult.data.session) {
+      setLoading(false);
+      toast.success("Conta criada");
+      navigate({ to: "/" });
+      return;
+    }
+
+    // Caso autoconfirm não tenha pegado, tenta login de novo
+    const retry = await supabase.auth.signInWithPassword({
+      email: finalEmail,
+      password: finalPassword,
+    });
+    setLoading(false);
+    if (retry.data.session) {
+      toast.success("Conta criada");
+      navigate({ to: "/" });
+      return;
+    }
+    toast.error(retry.error?.message || "Conta criada mas precisa confirmar email. Verifique sua caixa.");
   };
 
   return (
@@ -87,74 +119,43 @@ function LoginPage() {
           <CardDescription>Painel administrativo</CardDescription>
         </CardHeader>
         <CardContent>
-          {step === "email" ? (
-            <form onSubmit={sendCode} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email corporativo</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  autoFocus
-                  placeholder="voce@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Enviar código
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={verifyCode} className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Enviamos um código de 8 dígitos para
-                <br />
-                <span className="font-medium text-foreground">{email}</span>
-              </p>
-              <div className="flex justify-center">
-                <InputOTP maxLength={8} value={code} onChange={setCode} disabled={loading}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                    <InputOTPSlot index={6} />
-                    <InputOTPSlot index={7} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading || code.length !== 8}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Entrar
-              </Button>
-              <div className="flex items-center justify-between text-sm">
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setCode("");
-                    setStep("email");
-                  }}
-                  disabled={loading}
-                >
-                  Trocar email
-                </button>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => sendCode()}
-                  disabled={loading}
-                >
-                  Reenviar código
-                </button>
-              </div>
-            </form>
-          )}
+          <form onSubmit={submit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                autoFocus
+                autoComplete="email"
+                placeholder="voce@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Entrar
+            </Button>
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              Primeira vez? A conta é criada automaticamente com esses dados.
+            </p>
+          </form>
         </CardContent>
       </Card>
     </main>
