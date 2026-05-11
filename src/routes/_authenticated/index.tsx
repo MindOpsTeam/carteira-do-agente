@@ -180,13 +180,11 @@ function ComandoCentral() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Goals (for line chart marker)
+  // Goals (for line chart marker) — single-tenant
   const [goals, setGoals] = useState<Goal[]>([]);
   useEffect(() => {
     (async () => {
-      const { data: sess } = await supabase.auth.getUser();
-      if (!sess.user) return;
-      const { data } = await supabase.from("goals").select("*").eq("user_id", sess.user.id).eq("active", true);
+      const { data } = await supabase.from("goals").select("*").eq("active", true);
       setGoals((data as Goal[]) ?? []);
     })();
   }, []);

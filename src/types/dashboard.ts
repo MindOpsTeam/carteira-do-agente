@@ -29,7 +29,6 @@ export type GoalPeriod = "daily" | "weekly" | "monthly";
 
 export type Goal = {
   id: string;
-  user_id: string | null;
   metric: string;
   operator: string;
   target_value: number;

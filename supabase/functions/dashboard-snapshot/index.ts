@@ -46,29 +46,23 @@ Deno.serve(async (req: Request) => {
 
   const supabase = adminClient();
 
-  // ── Busca instância ─────────────────────────────────────────────────────
+  // ── Busca instância (single-tenant: 1 painel = 1 instância) ────────────
+  void user;
   const { data: instance } = await supabase
     .from("instances")
-    .select("ingress_url, hooks_token")
-    .eq("user_id", user.id)
+    .select("ingress_url, hooks_token, connected_integrations")
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!instance?.ingress_url || !instance?.hooks_token) {
     return errorResponse("Instância não encontrada ou sem ingress_url/hooks_token", 422);
   }
 
-  // ── Busca tenant → connected_integrations ───────────────────────────────
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("metadata")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const connectedIntegrations: string[] =
-    tenant?.metadata?.connected_integrations ?? [];
+  const connectedIntegrations: string[] = instance.connected_integrations ?? [];
 
   if (connectedIntegrations.length === 0) {
-    return errorResponse("Nenhuma integração conectada no tenant", 422);
+    return errorResponse("Nenhuma integração conectada", 422);
   }
 
   // ── Cache 5 min ─────────────────────────────────────────────────────────
@@ -76,7 +70,6 @@ Deno.serve(async (req: Request) => {
   const { data: cached } = await supabase
     .from("dashboard_snapshots")
     .select("data")
-    .eq("user_id", user.id)
     .gt("created_at", fiveMinAgo)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -219,11 +212,18 @@ Deno.serve(async (req: Request) => {
   };
 
   // ── Salva cache ────────────────────────────────────────────────────────
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   await supabase.from("dashboard_snapshots").insert({
-    user_id: user.id,
     data: snapshotPayload,
     created_at: new Date().toISOString(),
+    expires_at: expiresAt,
   });
+
+  // Limpa snapshots expirados (best-effort)
+  await supabase
+    .from("dashboard_snapshots")
+    .delete()
+    .lt("expires_at", new Date().toISOString());
 
   return jsonResponse(snapshotPayload);
 });

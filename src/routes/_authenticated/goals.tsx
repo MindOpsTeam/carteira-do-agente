@@ -76,9 +76,7 @@ function GoalsPage() {
   const { data: snapshot } = useQuery({ queryKey: ["dashboard-snapshot"], queryFn: fetchSnapshot, staleTime: 5 * 60 * 1000 });
 
   const reload = async () => {
-    const { data: sess } = await supabase.auth.getUser();
-    if (!sess.user) return;
-    const { data } = await supabase.from("goals").select("*").eq("user_id", sess.user.id).order("created_at");
+    const { data } = await supabase.from("goals").select("*").order("created_at");
     setGoals((data as Goal[]) ?? []);
     setLoading(false);
   };
@@ -193,8 +191,6 @@ function GoalDialog({ editing, onClose }: { editing: Goal | null; onClose: () =>
     }
     setSaving(true);
     try {
-      const { data: sess } = await supabase.auth.getUser();
-      if (!sess.user) throw new Error("Sem sessão");
       if (editing) {
         const { error } = await supabase.from("goals")
           .update({ metric, operator, target_value: target, period, active })
@@ -202,7 +198,7 @@ function GoalDialog({ editing, onClose }: { editing: Goal | null; onClose: () =>
         if (error) throw error;
       } else {
         const { error } = await supabase.from("goals")
-          .insert({ user_id: sess.user.id, metric, operator, target_value: target, period, active });
+          .insert({ metric, operator, target_value: target, period, active });
         if (error) throw error;
       }
       toast.success(editing ? "Meta atualizada" : "Meta criada");

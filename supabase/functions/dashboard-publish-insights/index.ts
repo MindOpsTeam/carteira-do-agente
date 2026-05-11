@@ -21,30 +21,12 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Method not allowed", 405);
   }
 
-  // ── Auth: X-Panel-Token ────────────────────────────────────────────────
+  // ── Auth: X-Panel-Token (single-tenant) ───────────────────────────────
   if (!validatePanelToken(req)) {
     return errorResponse("X-Panel-Token inválido ou ausente", 401);
   }
 
-  // ── Identifica instância via X-Hooks-Token ─────────────────────────────
-  const hooksToken = req.headers.get("X-Hooks-Token");
-  if (!hooksToken) {
-    return errorResponse("X-Hooks-Token header obrigatório", 401);
-  }
-
   const supabase = adminClient();
-
-  const { data: instance, error: instErr } = await supabase
-    .from("instances")
-    .select("user_id")
-    .eq("hooks_token", hooksToken)
-    .maybeSingle();
-
-  if (instErr || !instance?.user_id) {
-    return errorResponse("Instância não encontrada para hooks_token", 401);
-  }
-
-  const userId = instance.user_id;
 
   // ── Parse body ─────────────────────────────────────────────────────────
   let body: Array<{
@@ -78,18 +60,16 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // ── Limpa insights expirados do user ─────────────────────────────────
+  // ── Limpa insights expirados ──────────────────────────────────────────
   await supabase
     .from("marcos_insights")
     .delete()
-    .eq("user_id", userId)
     .lt("expires_at", new Date().toISOString());
 
   // ── Insere novos insights ─────────────────────────────────────────────
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
   const rows = body.map((item) => ({
-    user_id: userId,
     section: item.section,
     text: item.text,
     severity: item.severity,
