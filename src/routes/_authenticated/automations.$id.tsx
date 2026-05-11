@@ -309,7 +309,7 @@ function AutomationEditorPage() {
         </TabsList>
         <TabsContent value="builder">
           <BuilderColumn
-            draft={draft}
+            draft={d}
             update={update}
             updateTrigger={updateTrigger}
             addAction={addAction}
@@ -329,7 +329,7 @@ function AutomationEditorPage() {
 
       <div className="hidden lg:grid grid-cols-[1fr_360px] gap-6">
         <BuilderColumn
-          draft={draft}
+          draft={d}
           update={update}
           updateTrigger={updateTrigger}
           addAction={addAction}
