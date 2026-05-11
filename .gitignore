@@ -17,7 +17,8 @@ dist-ssr
 *.local
 
 # Env files
-.env
+# .env é committado com publishable_key (anon — pública por design, RLS protege)
+# NUNCA committar .env.local que possa ter service_role_key
 .env.local
 .env.*.local
 
