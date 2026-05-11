@@ -421,58 +421,64 @@ function BuilderColumn(p: BuilderProps) {
             ))}
           </div>
 
-          {d.trigger.type === "cron" && (
-            <div className="space-y-2">
-              <Label className="text-xs">Quando</Label>
-              <Select
-                value={CRON_PRESETS.find((p) => p.expr === d.trigger.expression)?.expr ?? ""}
-                onValueChange={(v) => updateTrigger({ ...d.trigger as { type: "cron"; expression: string }, expression: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Escolha um preset" /></SelectTrigger>
-                <SelectContent>
-                  {CRON_PRESETS.map((cp) => (
-                    <SelectItem key={cp.expr} value={cp.expr}>{cp.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div>
-                <Label className="text-xs text-muted-foreground">Cron avançado</Label>
-                <Input
-                  value={d.trigger.expression}
-                  onChange={(e) => updateTrigger({ type: "cron", expression: e.target.value })}
-                  className="font-mono"
-                />
-                {!isCronValid(d.trigger.expression) && (
-                  <p className="text-xs text-destructive mt-1">Cron deve ter 5 campos</p>
-                )}
+          {d.trigger.type === "cron" && (() => {
+            const tr = d.trigger as Extract<AutomationTrigger, { type: "cron" }>;
+            return (
+              <div className="space-y-2">
+                <Label className="text-xs">Quando</Label>
+                <Select
+                  value={CRON_PRESETS.find((p) => p.expr === tr.expression)?.expr ?? ""}
+                  onValueChange={(v) => updateTrigger({ ...tr, expression: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Escolha um preset" /></SelectTrigger>
+                  <SelectContent>
+                    {CRON_PRESETS.map((cp) => (
+                      <SelectItem key={cp.expr} value={cp.expr}>{cp.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Cron avançado</Label>
+                  <Input
+                    value={tr.expression}
+                    onChange={(e) => updateTrigger({ type: "cron", expression: e.target.value })}
+                    className="font-mono"
+                  />
+                  {!isCronValid(tr.expression) && (
+                    <p className="text-xs text-destructive mt-1">Cron deve ter 5 campos</p>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {d.trigger.type === "metric" && (
-            <div className="grid grid-cols-3 gap-2">
-              <Select value={d.trigger.metric} onValueChange={(v) => updateTrigger({ ...d.trigger as never, metric: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {METRICS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={d.trigger.operator} onValueChange={(v) => updateTrigger({ ...d.trigger as never, operator: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(["lt", "lte", "eq", "gte", "gt"] as const).map((op) => (
-                    <SelectItem key={op} value={op}>{op}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                value={d.trigger.value}
-                onChange={(e) => updateTrigger({ ...d.trigger as never, value: Number(e.target.value) })}
-                className="font-mono tabular-nums"
-              />
-            </div>
-          )}
+          {d.trigger.type === "metric" && (() => {
+            const tr = d.trigger as Extract<AutomationTrigger, { type: "metric" }>;
+            return (
+              <div className="grid grid-cols-3 gap-2">
+                <Select value={tr.metric} onValueChange={(v) => updateTrigger({ ...tr, metric: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {METRICS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={tr.operator} onValueChange={(v) => updateTrigger({ ...tr, operator: v as typeof tr.operator })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(["lt", "lte", "eq", "gte", "gt"] as const).map((op) => (
+                      <SelectItem key={op} value={op}>{op}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  value={tr.value}
+                  onChange={(e) => updateTrigger({ ...tr, value: Number(e.target.value) })}
+                  className="font-mono tabular-nums"
+                />
+              </div>
+            );
+          })()}
 
           {d.trigger.type === "manual" && (
             <p className="text-xs text-muted-foreground">Executada apenas via "Executar agora" ou pelo Marcos no chat.</p>
