@@ -30,6 +30,7 @@ import { Route as AuthenticatedIntegrationsMercadoLivreRouteImport } from './rou
 import { Route as AuthenticatedIntegrationsContaazulRouteImport } from './routes/_authenticated/integrations.contaazul'
 import { Route as AuthenticatedIntegrationsBlingRouteImport } from './routes/_authenticated/integrations.bling'
 import { Route as AuthenticatedInstancesIdRouteImport } from './routes/_authenticated/instances.$id'
+import { Route as AuthenticatedAutomationsIdRouteImport } from './routes/_authenticated/automations.$id'
 import { Route as AuthenticatedIntegrationsNuvemshopCallbackRouteImport } from './routes/_authenticated/integrations.nuvemshop.callback'
 import { Route as AuthenticatedIntegrationsMercadoLivreCallbackRouteImport } from './routes/_authenticated/integrations.mercado-livre.callback'
 import { Route as AuthenticatedIntegrationsContaazulCallbackRouteImport } from './routes/_authenticated/integrations.contaazul.callback'
@@ -148,6 +149,12 @@ const AuthenticatedInstancesIdRoute =
     path: '/instances/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAutomationsIdRoute =
+  AuthenticatedAutomationsIdRouteImport.update({
+    id: '/automations/$id',
+    path: '/automations/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIntegrationsNuvemshopCallbackRoute =
   AuthenticatedIntegrationsNuvemshopCallbackRouteImport.update({
     id: '/callback',
@@ -185,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/automations/$id': typeof AuthenticatedAutomationsIdRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
@@ -211,6 +219,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/automations/$id': typeof AuthenticatedAutomationsIdRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
@@ -239,6 +248,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/automations/$id': typeof AuthenticatedAutomationsIdRoute
   '/_authenticated/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/_authenticated/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/_authenticated/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/llm-usage'
     | '/reports'
     | '/settings'
+    | '/automations/$id'
     | '/instances/$id'
     | '/integrations/bling'
     | '/integrations/contaazul'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/'
+    | '/automations/$id'
     | '/instances/$id'
     | '/integrations/bling'
     | '/integrations/contaazul'
@@ -320,6 +332,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/settings'
     | '/_authenticated/'
+    | '/_authenticated/automations/$id'
     | '/_authenticated/instances/$id'
     | '/_authenticated/integrations/bling'
     | '/_authenticated/integrations/contaazul'
@@ -491,6 +504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstancesIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/automations/$id': {
+      id: '/_authenticated/automations/$id'
+      path: '/automations/$id'
+      fullPath: '/automations/$id'
+      preLoaderRoute: typeof AuthenticatedAutomationsIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/integrations/nuvemshop/callback': {
       id: '/_authenticated/integrations/nuvemshop/callback'
       path: '/callback'
@@ -591,6 +611,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAutomationsIdRoute: typeof AuthenticatedAutomationsIdRoute
   AuthenticatedInstancesIdRoute: typeof AuthenticatedInstancesIdRoute
   AuthenticatedIntegrationsBlingRoute: typeof AuthenticatedIntegrationsBlingRouteWithChildren
   AuthenticatedIntegrationsContaazulRoute: typeof AuthenticatedIntegrationsContaazulRouteWithChildren
@@ -611,6 +632,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAutomationsIdRoute: AuthenticatedAutomationsIdRoute,
   AuthenticatedInstancesIdRoute: AuthenticatedInstancesIdRoute,
   AuthenticatedIntegrationsBlingRoute:
     AuthenticatedIntegrationsBlingRouteWithChildren,
