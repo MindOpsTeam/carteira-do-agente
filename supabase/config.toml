@@ -85,3 +85,25 @@ verify_jwt = true
 # VPS → painel via X-Panel-Token + X-Hooks-Token
 [functions.dashboard-publish-insights]
 verify_jwt = false
+
+# Sprint 17 — Automation Engine
+[functions.automations-list]
+verify_jwt = true
+
+[functions.automations-save]
+verify_jwt = true
+
+[functions.automations-delete]
+verify_jwt = true
+
+[functions.automations-run-now]
+verify_jwt = true
+
+[functions.automation-confirm]
+verify_jwt = false
+
+[functions.automations-test]
+verify_jwt = true
+
+[functions.automations-templates-list]
+verify_jwt = true
