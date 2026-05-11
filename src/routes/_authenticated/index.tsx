@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -44,17 +43,12 @@ import {
 } from "@/components/ui/command";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyBRL, formatRelative } from "@/lib/format";
 import { fetchOnboardingStatus } from "@/hooks/use-onboarding";
-import type {
-  DashboardSnapshot,
-  GoalMetric,
-  Goal,
-} from "@/types/dashboard";
+import type { DashboardSnapshot, Goal } from "@/types/dashboard";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({ meta: [{ title: "Comando Central — Agente CFO" }] }),
