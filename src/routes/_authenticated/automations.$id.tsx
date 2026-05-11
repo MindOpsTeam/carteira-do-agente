@@ -181,29 +181,29 @@ function AutomationEditorPage() {
     update({ conditions: d.conditions.map((c, i) => (i === idx ? { ...c, ...patch } : c)) });
   };
   const removeCondition = (idx: number) => {
-    update({ conditions: draft.conditions.filter((_, i) => i !== idx) });
+    update({ conditions: d.conditions.filter((_, i) => i !== idx) });
   };
 
   async function save() {
-    if (draft.actions.length === 0) {
+    if (d.actions.length === 0) {
       toast.error("Adicione pelo menos uma ação");
       return;
     }
-    if (draft.trigger.type === "cron" && !isCronValid(draft.trigger.expression)) {
+    if (d.trigger.type === "cron" && !isCronValid(d.trigger.expression)) {
       toast.error("Expressão cron deve ter 5 campos");
       return;
     }
     setSaving(true);
     const payload = {
-      id: draft.id,
-      name: draft.name,
-      description: draft.description,
-      trigger: draft.trigger,
-      conditions: draft.conditions,
-      actions: draft.actions,
-      active: draft.active,
-      require_confirmation: draft.require_confirmation,
-      template_key: draft.template_key,
+      id: d.id,
+      name: d.name,
+      description: d.description,
+      trigger: d.trigger,
+      conditions: d.conditions,
+      actions: d.actions,
+      active: d.active,
+      require_confirmation: d.require_confirmation,
+      template_key: d.template_key,
     };
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-save`, {
@@ -217,15 +217,15 @@ function AutomationEditorPage() {
       const { error } = await supabase
         .from("automations")
         .update({
-          name: draft.name,
-          description: draft.description,
-          trigger: draft.trigger as never,
-          conditions: draft.conditions as never,
-          actions: draft.actions as never,
-          active: draft.active,
-          require_confirmation: draft.require_confirmation,
+          name: d.name,
+          description: d.description,
+          trigger: d.trigger as never,
+          conditions: d.conditions as never,
+          actions: d.actions as never,
+          active: d.active,
+          require_confirmation: d.require_confirmation,
         })
-        .eq("id", draft.id);
+        .eq("id", d.id);
       if (error) toast.error("Falha ao salvar");
       else toast.success("Salvo (modo offline)");
     } finally {
@@ -239,7 +239,7 @@ function AutomationEditorPage() {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-run-now`, {
         method: "POST",
         headers: await authHeaders(),
-        body: JSON.stringify({ automation_id: draft.id }),
+        body: JSON.stringify({ automation_id: d.id }),
       });
       if (!res.ok) throw new Error(String(res.status));
       toast.success("Disparado");
@@ -254,7 +254,7 @@ function AutomationEditorPage() {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-test`, {
         method: "POST",
         headers: await authHeaders(),
-        body: JSON.stringify({ actions: draft.actions, trigger_payload: {} }),
+        body: JSON.stringify({ actions: d.actions, trigger_payload: {} }),
       });
       if (!res.ok) throw new Error(String(res.status));
       const json = await res.json();
@@ -268,13 +268,13 @@ function AutomationEditorPage() {
   async function deleteIt() {
     if (!confirm("Excluir esta automação?")) return;
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-delete?id=${draft.id}`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-delete?id=${d.id}`, {
         method: "DELETE",
         headers: await authHeaders(),
       });
       if (!res.ok) throw new Error(String(res.status));
     } catch {
-      await supabase.from("automations").delete().eq("id", draft.id);
+      await supabase.from("automations").delete().eq("id", d.id);
     }
     toast.success("Excluído");
     navigate({ to: "/automations" });
@@ -371,13 +371,13 @@ function BuilderColumn(p: BuilderProps) {
       <Card>
         <CardContent className="p-4 space-y-3">
           <Input
-            value={draft.name}
+            value={d.name}
             onChange={(e) => update({ name: e.target.value })}
             className="text-lg font-semibold border-0 px-0 shadow-none focus-visible:ring-0"
             placeholder="Nome da automação"
           />
           <Textarea
-            value={draft.description ?? ""}
+            value={d.description ?? ""}
             onChange={(e) => update({ description: e.target.value })}
             placeholder="Descrição (opcional)"
             rows={2}
@@ -385,12 +385,12 @@ function BuilderColumn(p: BuilderProps) {
           />
           <div className="flex items-center gap-6 pt-2 border-t">
             <label className="flex items-center gap-2 text-sm">
-              <Switch checked={draft.active} onCheckedChange={(v) => update({ active: v })} />
+              <Switch checked={d.active} onCheckedChange={(v) => update({ active: v })} />
               Ativa
             </label>
             <label className="flex items-center gap-2 text-sm">
               <Switch
-                checked={draft.require_confirmation}
+                checked={d.require_confirmation}
                 onCheckedChange={(v) => update({ require_confirmation: v })}
               />
               Exigir minha confirmação
@@ -409,7 +409,7 @@ function BuilderColumn(p: BuilderProps) {
               <Button
                 key={t}
                 size="sm"
-                variant={draft.trigger.type === t ? "default" : "outline"}
+                variant={d.trigger.type === t ? "default" : "outline"}
                 onClick={() => {
                   if (t === "cron") updateTrigger({ type: "cron", expression: "0 9 * * 1" });
                   else if (t === "metric") updateTrigger({ type: "metric", metric: "balance_brl", operator: "lt", value: 50000 });
@@ -421,12 +421,12 @@ function BuilderColumn(p: BuilderProps) {
             ))}
           </div>
 
-          {draft.trigger.type === "cron" && (
+          {d.trigger.type === "cron" && (
             <div className="space-y-2">
               <Label className="text-xs">Quando</Label>
               <Select
-                value={CRON_PRESETS.find((p) => p.expr === draft.trigger.expression)?.expr ?? ""}
-                onValueChange={(v) => updateTrigger({ ...draft.trigger as { type: "cron"; expression: string }, expression: v })}
+                value={CRON_PRESETS.find((p) => p.expr === d.trigger.expression)?.expr ?? ""}
+                onValueChange={(v) => updateTrigger({ ...d.trigger as { type: "cron"; expression: string }, expression: v })}
               >
                 <SelectTrigger><SelectValue placeholder="Escolha um preset" /></SelectTrigger>
                 <SelectContent>
@@ -438,26 +438,26 @@ function BuilderColumn(p: BuilderProps) {
               <div>
                 <Label className="text-xs text-muted-foreground">Cron avançado</Label>
                 <Input
-                  value={draft.trigger.expression}
+                  value={d.trigger.expression}
                   onChange={(e) => updateTrigger({ type: "cron", expression: e.target.value })}
                   className="font-mono"
                 />
-                {!isCronValid(draft.trigger.expression) && (
+                {!isCronValid(d.trigger.expression) && (
                   <p className="text-xs text-destructive mt-1">Cron deve ter 5 campos</p>
                 )}
               </div>
             </div>
           )}
 
-          {draft.trigger.type === "metric" && (
+          {d.trigger.type === "metric" && (
             <div className="grid grid-cols-3 gap-2">
-              <Select value={draft.trigger.metric} onValueChange={(v) => updateTrigger({ ...draft.trigger as never, metric: v })}>
+              <Select value={d.trigger.metric} onValueChange={(v) => updateTrigger({ ...d.trigger as never, metric: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {METRICS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={draft.trigger.operator} onValueChange={(v) => updateTrigger({ ...draft.trigger as never, operator: v })}>
+              <Select value={d.trigger.operator} onValueChange={(v) => updateTrigger({ ...d.trigger as never, operator: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(["lt", "lte", "eq", "gte", "gt"] as const).map((op) => (
@@ -467,14 +467,14 @@ function BuilderColumn(p: BuilderProps) {
               </Select>
               <Input
                 type="number"
-                value={draft.trigger.value}
-                onChange={(e) => updateTrigger({ ...draft.trigger as never, value: Number(e.target.value) })}
+                value={d.trigger.value}
+                onChange={(e) => updateTrigger({ ...d.trigger as never, value: Number(e.target.value) })}
                 className="font-mono tabular-nums"
               />
             </div>
           )}
 
-          {draft.trigger.type === "manual" && (
+          {d.trigger.type === "manual" && (
             <p className="text-xs text-muted-foreground">Executada apenas via "Executar agora" ou pelo Marcos no chat.</p>
           )}
         </CardContent>
@@ -488,10 +488,10 @@ function BuilderColumn(p: BuilderProps) {
           </Button>
         </CardHeader>
         <CardContent className="space-y-2">
-          {draft.conditions.length === 0 && (
+          {d.conditions.length === 0 && (
             <p className="text-xs text-muted-foreground">Sem condições — todos os triggers passam.</p>
           )}
-          {draft.conditions.map((c, i) => (
+          {d.conditions.map((c, i) => (
             <div key={i} className="grid grid-cols-[1fr_100px_1fr_auto] gap-2">
               <Input
                 placeholder="campo (ex: amount_brl)"
@@ -552,16 +552,16 @@ function BuilderColumn(p: BuilderProps) {
           </Popover>
         </CardHeader>
         <CardContent className="space-y-3">
-          {draft.actions.length === 0 && (
+          {d.actions.length === 0 && (
             <p className="text-xs text-muted-foreground">Adicione ao menos uma ação para salvar.</p>
           )}
-          {draft.actions.map((a, i) => (
+          {d.actions.map((a, i) => (
             <ActionCard
               key={i}
               idx={i}
-              total={draft.actions.length}
+              total={d.actions.length}
               action={a}
-              forceConfirm={draft.require_confirmation}
+              forceConfirm={d.require_confirmation}
               onMove={moveAction}
               onRemove={removeAction}
               onPatch={patchAction}
