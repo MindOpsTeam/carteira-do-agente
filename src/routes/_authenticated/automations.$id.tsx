@@ -152,32 +152,33 @@ function AutomationEditorPage() {
     );
   }
 
-  const update = (patch: Partial<Automation>) => setDraft({ ...draft, ...patch });
+  const d: Automation = draft;
+  const update = (patch: Partial<Automation>) => setDraft({ ...d, ...patch });
   const updateTrigger = (t: AutomationTrigger) => update({ trigger: t });
 
   const addAction = (type: AutomationActionType) => {
-    update({ actions: [...draft.actions, defaultActionFor(type)] });
+    update({ actions: [...d.actions, defaultActionFor(type)] });
   };
   const moveAction = (idx: number, dir: -1 | 1) => {
-    const next = [...draft.actions];
+    const next = [...d.actions];
     const j = idx + dir;
     if (j < 0 || j >= next.length) return;
     [next[idx], next[j]] = [next[j], next[idx]];
     update({ actions: next });
   };
   const removeAction = (idx: number) => {
-    update({ actions: draft.actions.filter((_, i) => i !== idx) });
+    update({ actions: d.actions.filter((_, i) => i !== idx) });
   };
   const patchAction = (idx: number, patch: Partial<AutomationAction>) => {
-    const next = draft.actions.map((a, i) => (i === idx ? ({ ...a, ...patch } as AutomationAction) : a));
+    const next = d.actions.map((a, i) => (i === idx ? ({ ...a, ...patch } as AutomationAction) : a));
     update({ actions: next });
   };
 
   const addCondition = () => update({
-    conditions: [...draft.conditions, { field: "", op: "eq", value: "" } as AutomationCondition],
+    conditions: [...d.conditions, { field: "", op: "eq", value: "" } as AutomationCondition],
   });
   const patchCondition = (idx: number, patch: Partial<AutomationCondition>) => {
-    update({ conditions: draft.conditions.map((c, i) => (i === idx ? { ...c, ...patch } : c)) });
+    update({ conditions: d.conditions.map((c, i) => (i === idx ? { ...c, ...patch } : c)) });
   };
   const removeCondition = (idx: number) => {
     update({ conditions: draft.conditions.filter((_, i) => i !== idx) });
