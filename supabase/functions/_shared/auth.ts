@@ -43,7 +43,7 @@ export function validatePanelToken(req: Request): boolean {
 export function errorResponse(message: string, status: number): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -53,7 +53,7 @@ export function errorResponse(message: string, status: number): Response {
 export function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -62,6 +62,7 @@ export function jsonResponse(data: unknown, status = 200): Response {
 // ---------------------------------------------------------------------------
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-panel-token",
 };
