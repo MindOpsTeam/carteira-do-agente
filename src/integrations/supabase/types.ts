@@ -38,6 +38,104 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_runs: {
+        Row: {
+          automation_id: string | null
+          confirmation_message_id: string | null
+          confirmation_token: string | null
+          error: string | null
+          finished_at: string | null
+          id: number
+          result: Json | null
+          started_at: string
+          status: string
+          steps: Json
+          trigger_payload: Json | null
+        }
+        Insert: {
+          automation_id?: string | null
+          confirmation_message_id?: string | null
+          confirmation_token?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: number
+          result?: Json | null
+          started_at?: string
+          status: string
+          steps?: Json
+          trigger_payload?: Json | null
+        }
+        Update: {
+          automation_id?: string | null
+          confirmation_message_id?: string | null
+          confirmation_token?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: number
+          result?: Json | null
+          started_at?: string
+          status?: string
+          steps?: Json
+          trigger_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          actions: Json
+          active: boolean
+          conditions: Json
+          created_at: string
+          description: string | null
+          id: string
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          require_confirmation: boolean
+          template_key: string | null
+          trigger: Json
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          active?: boolean
+          conditions?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          require_confirmation?: boolean
+          template_key?: string | null
+          trigger: Json
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          active?: boolean
+          conditions?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          require_confirmation?: boolean
+          template_key?: string | null
+          trigger?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -74,21 +172,18 @@ export type Database = {
           data: Json
           expires_at: string
           id: number
-          user_id: string | null
         }
         Insert: {
           created_at?: string
           data: Json
           expires_at?: string
           id?: number
-          user_id?: string | null
         }
         Update: {
           created_at?: string
           data?: Json
           expires_at?: string
           id?: number
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -138,7 +233,6 @@ export type Database = {
           period: string
           target_value: number
           updated_at: string
-          user_id: string | null
         }
         Insert: {
           active?: boolean
@@ -150,7 +244,6 @@ export type Database = {
           period?: string
           target_value: number
           updated_at?: string
-          user_id?: string | null
         }
         Update: {
           active?: boolean
@@ -162,7 +255,6 @@ export type Database = {
           period?: string
           target_value?: number
           updated_at?: string
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -285,7 +377,6 @@ export type Database = {
           section: string
           severity: string
           text: string
-          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -295,7 +386,6 @@ export type Database = {
           section: string
           severity?: string
           text: string
-          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -305,7 +395,6 @@ export type Database = {
           section?: string
           severity?: string
           text?: string
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -351,7 +440,6 @@ export type Database = {
           inputs: Json
           name: string
           result: Json | null
-          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -359,7 +447,6 @@ export type Database = {
           inputs?: Json
           name: string
           result?: Json | null
-          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -367,7 +454,6 @@ export type Database = {
           inputs?: Json
           name?: string
           result?: Json | null
-          user_id?: string | null
         }
         Relationships: []
       }

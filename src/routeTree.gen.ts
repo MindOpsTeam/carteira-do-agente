@@ -23,12 +23,14 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_authenticated/integrations.index'
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
+import { Route as AuthenticatedAutomationsIndexRouteImport } from './routes/_authenticated/automations.index'
 import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authenticated/settings_.rules'
 import { Route as AuthenticatedIntegrationsNuvemshopRouteImport } from './routes/_authenticated/integrations.nuvemshop'
 import { Route as AuthenticatedIntegrationsMercadoLivreRouteImport } from './routes/_authenticated/integrations.mercado-livre'
 import { Route as AuthenticatedIntegrationsContaazulRouteImport } from './routes/_authenticated/integrations.contaazul'
 import { Route as AuthenticatedIntegrationsBlingRouteImport } from './routes/_authenticated/integrations.bling'
 import { Route as AuthenticatedInstancesIdRouteImport } from './routes/_authenticated/instances.$id'
+import { Route as AuthenticatedAutomationsIdRouteImport } from './routes/_authenticated/automations.$id'
 import { Route as AuthenticatedIntegrationsNuvemshopCallbackRouteImport } from './routes/_authenticated/integrations.nuvemshop.callback'
 import { Route as AuthenticatedIntegrationsMercadoLivreCallbackRouteImport } from './routes/_authenticated/integrations.mercado-livre.callback'
 import { Route as AuthenticatedIntegrationsContaazulCallbackRouteImport } from './routes/_authenticated/integrations.contaazul.callback'
@@ -105,6 +107,12 @@ const AuthenticatedInstancesIndexRoute =
     path: '/instances/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAutomationsIndexRoute =
+  AuthenticatedAutomationsIndexRouteImport.update({
+    id: '/automations/',
+    path: '/automations/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSettingsRulesRoute =
   AuthenticatedSettingsRulesRouteImport.update({
     id: '/settings_/rules',
@@ -139,6 +147,12 @@ const AuthenticatedInstancesIdRoute =
   AuthenticatedInstancesIdRouteImport.update({
     id: '/instances/$id',
     path: '/instances/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAutomationsIdRoute =
+  AuthenticatedAutomationsIdRouteImport.update({
+    id: '/automations/$id',
+    path: '/automations/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedIntegrationsNuvemshopCallbackRoute =
@@ -178,12 +192,14 @@ export interface FileRoutesByFullPath {
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/automations/$id': typeof AuthenticatedAutomationsIdRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
+  '/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
   '/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -203,12 +219,14 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/automations/$id': typeof AuthenticatedAutomationsIdRoute
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
+  '/automations': typeof AuthenticatedAutomationsIndexRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
   '/integrations': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -230,12 +248,14 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/automations/$id': typeof AuthenticatedAutomationsIdRoute
   '/_authenticated/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/_authenticated/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/_authenticated/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   '/_authenticated/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/_authenticated/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/_authenticated/settings_/rules': typeof AuthenticatedSettingsRulesRoute
+  '/_authenticated/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
   '/_authenticated/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/_authenticated/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
@@ -257,12 +277,14 @@ export interface FileRouteTypes {
     | '/llm-usage'
     | '/reports'
     | '/settings'
+    | '/automations/$id'
     | '/instances/$id'
     | '/integrations/bling'
     | '/integrations/contaazul'
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
     | '/settings/rules'
+    | '/automations/'
     | '/instances/'
     | '/integrations/'
     | '/integrations/bling/callback'
@@ -282,12 +304,14 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/'
+    | '/automations/$id'
     | '/instances/$id'
     | '/integrations/bling'
     | '/integrations/contaazul'
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
     | '/settings/rules'
+    | '/automations'
     | '/instances'
     | '/integrations'
     | '/integrations/bling/callback'
@@ -308,12 +332,14 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/settings'
     | '/_authenticated/'
+    | '/_authenticated/automations/$id'
     | '/_authenticated/instances/$id'
     | '/_authenticated/integrations/bling'
     | '/_authenticated/integrations/contaazul'
     | '/_authenticated/integrations/mercado-livre'
     | '/_authenticated/integrations/nuvemshop'
     | '/_authenticated/settings_/rules'
+    | '/_authenticated/automations/'
     | '/_authenticated/instances/'
     | '/_authenticated/integrations/'
     | '/_authenticated/integrations/bling/callback'
@@ -429,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstancesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/automations/': {
+      id: '/_authenticated/automations/'
+      path: '/automations'
+      fullPath: '/automations/'
+      preLoaderRoute: typeof AuthenticatedAutomationsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/settings_/rules': {
       id: '/_authenticated/settings_/rules'
       path: '/settings/rules'
@@ -469,6 +502,13 @@ declare module '@tanstack/react-router' {
       path: '/instances/$id'
       fullPath: '/instances/$id'
       preLoaderRoute: typeof AuthenticatedInstancesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/automations/$id': {
+      id: '/_authenticated/automations/$id'
+      path: '/automations/$id'
+      fullPath: '/automations/$id'
+      preLoaderRoute: typeof AuthenticatedAutomationsIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/integrations/nuvemshop/callback': {
@@ -571,12 +611,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAutomationsIdRoute: typeof AuthenticatedAutomationsIdRoute
   AuthenticatedInstancesIdRoute: typeof AuthenticatedInstancesIdRoute
   AuthenticatedIntegrationsBlingRoute: typeof AuthenticatedIntegrationsBlingRouteWithChildren
   AuthenticatedIntegrationsContaazulRoute: typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   AuthenticatedIntegrationsMercadoLivreRoute: typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   AuthenticatedIntegrationsNuvemshopRoute: typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   AuthenticatedSettingsRulesRoute: typeof AuthenticatedSettingsRulesRoute
+  AuthenticatedAutomationsIndexRoute: typeof AuthenticatedAutomationsIndexRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
   AuthenticatedIntegrationsIndexRoute: typeof AuthenticatedIntegrationsIndexRoute
 }
@@ -590,6 +632,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAutomationsIdRoute: AuthenticatedAutomationsIdRoute,
   AuthenticatedInstancesIdRoute: AuthenticatedInstancesIdRoute,
   AuthenticatedIntegrationsBlingRoute:
     AuthenticatedIntegrationsBlingRouteWithChildren,
@@ -600,6 +643,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIntegrationsNuvemshopRoute:
     AuthenticatedIntegrationsNuvemshopRouteWithChildren,
   AuthenticatedSettingsRulesRoute: AuthenticatedSettingsRulesRoute,
+  AuthenticatedAutomationsIndexRoute: AuthenticatedAutomationsIndexRoute,
   AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
   AuthenticatedIntegrationsIndexRoute: AuthenticatedIntegrationsIndexRoute,
 }
