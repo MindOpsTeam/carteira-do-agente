@@ -17,6 +17,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedLlmUsageRouteImport } from './routes/_authenticated/llm-usage'
+import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedEventsRouteImport } from './routes/_authenticated/events'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
@@ -70,6 +71,11 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
 const AuthenticatedLlmUsageRoute = AuthenticatedLlmUsageRouteImport.update({
   id: '/llm-usage',
   path: '/llm-usage',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
+  id: '/goals',
+  path: '/goals',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedEventsRoute = AuthenticatedEventsRouteImport.update({
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuthenticatedAuditRoute
   '/chat': typeof AuthenticatedChatRoute
   '/events': typeof AuthenticatedEventsRoute
+  '/goals': typeof AuthenticatedGoalsRoute
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/audit': typeof AuthenticatedAuditRoute
   '/chat': typeof AuthenticatedChatRoute
   '/events': typeof AuthenticatedEventsRoute
+  '/goals': typeof AuthenticatedGoalsRoute
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/events': typeof AuthenticatedEventsRoute
+  '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/llm-usage': typeof AuthenticatedLlmUsageRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/chat'
     | '/events'
+    | '/goals'
     | '/llm-usage'
     | '/reports'
     | '/settings'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/chat'
     | '/events'
+    | '/goals'
     | '/llm-usage'
     | '/reports'
     | '/settings'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/_authenticated/audit'
     | '/_authenticated/chat'
     | '/_authenticated/events'
+    | '/_authenticated/goals'
     | '/_authenticated/llm-usage'
     | '/_authenticated/reports'
     | '/_authenticated/settings'
@@ -373,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/llm-usage'
       fullPath: '/llm-usage'
       preLoaderRoute: typeof AuthenticatedLlmUsageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/goals': {
+      id: '/_authenticated/goals'
+      path: '/goals'
+      fullPath: '/goals'
+      preLoaderRoute: typeof AuthenticatedGoalsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/events': {
@@ -547,6 +566,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedEventsRoute: typeof AuthenticatedEventsRoute
+  AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedLlmUsageRoute: typeof AuthenticatedLlmUsageRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -565,6 +585,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedEventsRoute: AuthenticatedEventsRoute,
+  AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedLlmUsageRoute: AuthenticatedLlmUsageRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
