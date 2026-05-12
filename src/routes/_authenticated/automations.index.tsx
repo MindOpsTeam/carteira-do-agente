@@ -340,10 +340,10 @@ function AutomationsListPage() {
                     {statusIcon(last?.status)}
                     {last ? (
                       <>
-                        último: {last.status} · {formatRelative(last.started_at)}
+                        {RUN_STATUS_LABEL_SHORT[last.status] ?? last.status} · {formatRelative(last.started_at)}
                       </>
                     ) : a.last_run_at ? (
-                      <>último run {formatRelative(a.last_run_at)}</>
+                      <>último: {formatRelative(a.last_run_at)}</>
                     ) : (
                       <>nunca executou</>
                     )}
