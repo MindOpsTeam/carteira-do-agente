@@ -90,6 +90,13 @@ verify_jwt = true
 [functions.dashboard-publish-insights]
 verify_jwt = false
 
+# Sprint 19 — Automation Engine poll/record (VPS → painel via X-Panel-Token + X-Hooks-Token)
+[functions.automations-engine-poll]
+verify_jwt = false
+
+[functions.automations-engine-record-run]
+verify_jwt = false
+
 # Sprint 17 — Automation Engine
 [functions.automations-list]
 verify_jwt = true
