@@ -34,7 +34,7 @@ import { FrequencyPicker } from "@/components/automation-builder/FrequencyPicker
 import { DescriptiveSentence } from "@/components/automation-builder/DescriptiveSentence";
 import { VariablePills } from "@/components/automation-builder/VariablePills";
 import {
-  ACTION_META, NUMBER_OPERATOR_LABELS, RUN_STATUS_LABEL, metricLabel,
+  ACTION_META, NUMBER_OPERATOR_LABELS, RUN_STATUS_LABEL,
 } from "@/components/automation-builder/constants";
 
 export const Route = createFileRoute("/_authenticated/automations/$id")({
