@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,18 +16,26 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowUp, ArrowDown, X, Plus, Save, Play, FlaskConical,
-  AlertTriangle, CheckCircle2, Clock, XCircle, Trash2, Lock, ShieldAlert,
+  AlertTriangle, CheckCircle2, Clock, XCircle, Trash2, ChevronRight,
 } from "lucide-react";
 import { formatRelative } from "@/lib/format";
 import {
   type Automation, type AutomationAction, type AutomationActionType,
   type AutomationCondition, type AutomationRun, type AutomationTrigger,
-  ACTION_LABELS, isRiskyAction,
 } from "@/types/automations";
+import { MetricSelect } from "@/components/automation-builder/MetricSelect";
+import { MoneyInput } from "@/components/automation-builder/MoneyInput";
+import { FrequencyPicker } from "@/components/automation-builder/FrequencyPicker";
+import { DescriptiveSentence } from "@/components/automation-builder/DescriptiveSentence";
+import { VariablePills } from "@/components/automation-builder/VariablePills";
+import {
+  ACTION_META, NUMBER_OPERATOR_LABELS, RUN_STATUS_LABEL,
+} from "@/components/automation-builder/constants";
 
 export const Route = createFileRoute("/_authenticated/automations/$id")({
   head: () => ({ meta: [{ title: "Editar automação — Agente CFO" }] }),
@@ -49,23 +57,6 @@ async function authHeaders() {
 const ACTION_TYPES: AutomationActionType[] = [
   "send_report", "send_whatsapp", "crm_update_deal", "crm_create_task",
   "erp_create_invoice", "cobranca_send", "ask_owner_confirm", "ai_decide",
-];
-
-const CRON_PRESETS: { label: string; expr: string }[] = [
-  { label: "Toda segunda às 09:00", expr: "0 9 * * 1" },
-  { label: "Todo dia às 08:00", expr: "0 8 * * *" },
-  { label: "Todo dia às 10:00", expr: "0 10 * * *" },
-  { label: "Todo dia às 18:00", expr: "0 18 * * *" },
-  { label: "Toda sexta às 17:00", expr: "0 17 * * 5" },
-  { label: "Todo dia 1 às 09:00", expr: "0 9 1 * *" },
-];
-
-const METRICS = [
-  { value: "balance_brl", label: "Saldo em caixa" },
-  { value: "receivables_30d_brl", label: "A receber 30d" },
-  { value: "payables_30d_brl", label: "A pagar 30d" },
-  { value: "pipeline_weighted_brl", label: "Pipeline ponderado" },
-  { value: "overdue_total_brl", label: "Inadimplência total" },
 ];
 
 function defaultActionFor(type: AutomationActionType): AutomationAction {
@@ -109,6 +100,10 @@ function statusIcon(status: AutomationRun["status"]) {
   return <Clock className="h-4 w-4 text-sky-400" />;
 }
 
+function isMetricMonetary(metric: string): boolean {
+  return /brl|amount|valor|saldo/i.test(metric);
+}
+
 function AutomationEditorPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
@@ -124,11 +119,17 @@ function AutomationEditorPage() {
 
   const [draft, setDraft] = useState<Automation | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [testResult, setTestResult] = useState<Array<Record<string, unknown>> | null>(null);
+  const lastSnapshot = useRef<string>("");
 
-  useEffect(() => { if (loaded) setDraft(structuredClone(loaded)); }, [loaded]);
+  useEffect(() => {
+    if (loaded) {
+      setDraft(structuredClone(loaded));
+      lastSnapshot.current = JSON.stringify(loaded);
+    }
+  }, [loaded]);
 
-  // Realtime: automation_runs
   useEffect(() => {
     const ch = supabase
       .channel(`auto-runs-${id}`)
@@ -153,6 +154,16 @@ function AutomationEditorPage() {
   }
 
   const d: Automation = draft;
+  const dirty = JSON.stringify({
+    name: d.name, description: d.description, trigger: d.trigger,
+    conditions: d.conditions, actions: d.actions, active: d.active,
+    require_confirmation: d.require_confirmation,
+  }) !== JSON.stringify({
+    name: loaded?.name, description: loaded?.description, trigger: loaded?.trigger,
+    conditions: loaded?.conditions, actions: loaded?.actions, active: loaded?.active,
+    require_confirmation: loaded?.require_confirmation,
+  });
+
   const update = (patch: Partial<Automation>) => setDraft({ ...d, ...patch });
   const updateTrigger = (t: AutomationTrigger) => update({ trigger: t });
 
@@ -175,7 +186,7 @@ function AutomationEditorPage() {
   };
 
   const addCondition = () => update({
-    conditions: [...d.conditions, { field: "", op: "eq", value: "" } as AutomationCondition],
+    conditions: [...d.conditions, { field: "balance_brl", op: "eq", value: "" } as AutomationCondition],
   });
   const patchCondition = (idx: number, patch: Partial<AutomationCondition>) => {
     update({ conditions: d.conditions.map((c, i) => (i === idx ? { ...c, ...patch } : c)) });
@@ -190,44 +201,35 @@ function AutomationEditorPage() {
       return;
     }
     if (d.trigger.type === "cron" && !isCronValid(d.trigger.expression)) {
-      toast.error("Expressão cron deve ter 5 campos");
+      toast.error("Expressão de agendamento inválida");
       return;
     }
     setSaving(true);
     const payload = {
-      id: d.id,
-      name: d.name,
-      description: d.description,
-      trigger: d.trigger,
-      conditions: d.conditions,
-      actions: d.actions,
-      active: d.active,
-      require_confirmation: d.require_confirmation,
+      id: d.id, name: d.name, description: d.description,
+      trigger: d.trigger, conditions: d.conditions, actions: d.actions,
+      active: d.active, require_confirmation: d.require_confirmation,
       template_key: d.template_key,
     };
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-save`, {
-        method: "POST",
-        headers: await authHeaders(),
-        body: JSON.stringify(payload),
+        method: "POST", headers: await authHeaders(), body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(String(res.status));
       toast.success("Salvo");
+      setSavedAt(new Date());
     } catch {
       const { error } = await supabase
         .from("automations")
         .update({
-          name: d.name,
-          description: d.description,
-          trigger: d.trigger as never,
-          conditions: d.conditions as never,
-          actions: d.actions as never,
-          active: d.active,
+          name: d.name, description: d.description,
+          trigger: d.trigger as never, conditions: d.conditions as never,
+          actions: d.actions as never, active: d.active,
           require_confirmation: d.require_confirmation,
         })
         .eq("id", d.id);
       if (error) toast.error("Falha ao salvar");
-      else toast.success("Salvo (modo offline)");
+      else { toast.success("Salvo (modo offline)"); setSavedAt(new Date()); }
     } finally {
       setSaving(false);
       refetch();
@@ -237,40 +239,33 @@ function AutomationEditorPage() {
   async function runNow() {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-run-now`, {
-        method: "POST",
-        headers: await authHeaders(),
+        method: "POST", headers: await authHeaders(),
         body: JSON.stringify({ automation_id: d.id }),
       });
       if (!res.ok) throw new Error(String(res.status));
       toast.success("Disparado");
       refetchRuns();
-    } catch {
-      toast.error("Backend de execução indisponível");
-    }
+    } catch { toast.error("Backend de execução indisponível"); }
   }
 
   async function test() {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-test`, {
-        method: "POST",
-        headers: await authHeaders(),
+        method: "POST", headers: await authHeaders(),
         body: JSON.stringify({ actions: d.actions, trigger_payload: {} }),
       });
       if (!res.ok) throw new Error(String(res.status));
       const json = await res.json();
       setTestResult(json.steps ?? []);
       toast.success("Preview gerado");
-    } catch {
-      toast.error("Backend de teste indisponível");
-    }
+    } catch { toast.error("Backend de teste indisponível"); }
   }
 
   async function deleteIt() {
     if (!confirm("Excluir esta automação?")) return;
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/automations-delete?id=${d.id}`, {
-        method: "DELETE",
-        headers: await authHeaders(),
+        method: "DELETE", headers: await authHeaders(),
       });
       if (!res.ok) throw new Error(String(res.status));
     } catch {
@@ -281,64 +276,64 @@ function AutomationEditorPage() {
   }
 
   return (
-    <div className="container max-w-7xl py-8 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <Link to="/automations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-          <ArrowLeft className="h-3.5 w-3.5" /> Automações
-        </Link>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={deleteIt} className="text-destructive hover:text-destructive gap-1.5">
-            <Trash2 className="h-4 w-4" /> Excluir
-          </Button>
-          <Button variant="outline" size="sm" onClick={test} className="gap-1.5">
-            <FlaskConical className="h-4 w-4" /> Testar
-          </Button>
-          <Button variant="outline" size="sm" onClick={runNow} className="gap-1.5">
-            <Play className="h-4 w-4" /> Executar agora
-          </Button>
-          <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
-            <Save className="h-4 w-4" /> {saving ? "Salvando…" : "Salvar"}
-          </Button>
+    <div className="container max-w-7xl py-6 space-y-4">
+      {/* Sticky save bar */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-b">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link to="/automations" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 shrink-0">
+              <ArrowLeft className="h-3.5 w-3.5" /> Automações
+            </Link>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              {dirty ? (
+                <span className="text-amber-400">● alterações não salvas</span>
+              ) : savedAt ? (
+                <span className="text-emerald-400">✓ salvo agora</span>
+              ) : (
+                <span>tudo salvo</span>
+              )}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={deleteIt} className="text-destructive hover:text-destructive gap-1.5">
+              <Trash2 className="h-4 w-4" /> Excluir
+            </Button>
+            <Button variant="outline" size="sm" onClick={test} className="gap-1.5">
+              <FlaskConical className="h-4 w-4" /> Testar
+            </Button>
+            <Button variant="outline" size="sm" onClick={runNow} className="gap-1.5">
+              <Play className="h-4 w-4" /> Executar agora
+            </Button>
+            <Button size="sm" onClick={save} disabled={saving || !dirty} className="gap-1.5">
+              <Save className="h-4 w-4" /> {saving ? "Salvando…" : "Salvar"}
+            </Button>
+          </div>
         </div>
       </div>
 
+      <DescriptiveSentence draft={d} />
+
       <Tabs defaultValue="builder" className="lg:hidden">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="builder">Builder</TabsTrigger>
+          <TabsTrigger value="builder">Editar</TabsTrigger>
           <TabsTrigger value="log">Histórico ({runs.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="builder">
           <BuilderColumn
-            draft={d}
-            update={update}
-            updateTrigger={updateTrigger}
-            addAction={addAction}
-            moveAction={moveAction}
-            removeAction={removeAction}
-            patchAction={patchAction}
-            addCondition={addCondition}
-            patchCondition={patchCondition}
-            removeCondition={removeCondition}
+            draft={d} update={update} updateTrigger={updateTrigger}
+            addAction={addAction} moveAction={moveAction} removeAction={removeAction} patchAction={patchAction}
+            addCondition={addCondition} patchCondition={patchCondition} removeCondition={removeCondition}
             testResult={testResult}
           />
         </TabsContent>
-        <TabsContent value="log">
-          <RunsColumn runs={runs} />
-        </TabsContent>
+        <TabsContent value="log"><RunsColumn runs={runs} /></TabsContent>
       </Tabs>
 
       <div className="hidden lg:grid grid-cols-[1fr_360px] gap-6">
         <BuilderColumn
-          draft={d}
-          update={update}
-          updateTrigger={updateTrigger}
-          addAction={addAction}
-          moveAction={moveAction}
-          removeAction={removeAction}
-          patchAction={patchAction}
-          addCondition={addCondition}
-          patchCondition={patchCondition}
-          removeCondition={removeCondition}
+          draft={d} update={update} updateTrigger={updateTrigger}
+          addAction={addAction} moveAction={moveAction} removeAction={removeAction} patchAction={patchAction}
+          addCondition={addCondition} patchCondition={patchCondition} removeCondition={removeCondition}
           testResult={testResult}
         />
         <RunsColumn runs={runs} />
@@ -365,6 +360,7 @@ function BuilderColumn(p: BuilderProps) {
   const { draft: d, update, updateTrigger, addAction, moveAction, removeAction, patchAction,
     addCondition, patchCondition, removeCondition, testResult } = p;
   const [actionPickerOpen, setActionPickerOpen] = useState(false);
+  const [conditionsOpen, setConditionsOpen] = useState(d.conditions.length > 0);
 
   return (
     <div className="space-y-4">
@@ -379,11 +375,11 @@ function BuilderColumn(p: BuilderProps) {
           <Textarea
             value={d.description ?? ""}
             onChange={(e) => update({ description: e.target.value })}
-            placeholder="Descrição (opcional)"
+            placeholder="Para que serve essa automação? (opcional)"
             rows={2}
             className="border-0 px-0 shadow-none focus-visible:ring-0 resize-none"
           />
-          <div className="flex items-center gap-6 pt-2 border-t">
+          <div className="flex items-center gap-6 pt-2 border-t flex-wrap">
             <label className="flex items-center gap-2 text-sm">
               <Switch checked={d.active} onCheckedChange={(v) => update({ active: v })} />
               Ativa
@@ -393,7 +389,7 @@ function BuilderColumn(p: BuilderProps) {
                 checked={d.require_confirmation}
                 onCheckedChange={(v) => update({ require_confirmation: v })}
               />
-              Exigir minha confirmação
+              Pedir minha confirmação antes de executar
             </label>
           </div>
         </CardContent>
@@ -401,10 +397,10 @@ function BuilderColumn(p: BuilderProps) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Trigger</CardTitle>
+          <CardTitle className="text-sm">Quando essa automação roda?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {(["cron", "metric", "manual"] as const).map((t) => (
               <Button
                 key={t}
@@ -415,8 +411,9 @@ function BuilderColumn(p: BuilderProps) {
                   else if (t === "metric") updateTrigger({ type: "metric", metric: "balance_brl", operator: "lt", value: 50000 });
                   else updateTrigger({ type: "manual" });
                 }}
+                className="h-auto py-2 text-xs whitespace-normal"
               >
-                {t}
+                {t === "cron" ? "Em data/hora específica" : t === "metric" ? "Quando algum número mudar" : "Só quando eu mandar"}
               </Button>
             ))}
           </div>
@@ -424,133 +421,152 @@ function BuilderColumn(p: BuilderProps) {
           {d.trigger.type === "cron" && (() => {
             const tr = d.trigger as Extract<AutomationTrigger, { type: "cron" }>;
             return (
-              <div className="space-y-2">
-                <Label className="text-xs">Quando</Label>
-                <Select
-                  value={CRON_PRESETS.find((p) => p.expr === tr.expression)?.expr ?? ""}
-                  onValueChange={(v) => updateTrigger({ ...tr, expression: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Escolha um preset" /></SelectTrigger>
-                  <SelectContent>
-                    {CRON_PRESETS.map((cp) => (
-                      <SelectItem key={cp.expr} value={cp.expr}>{cp.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Cron avançado</Label>
-                  <Input
-                    value={tr.expression}
-                    onChange={(e) => updateTrigger({ type: "cron", expression: e.target.value })}
-                    className="font-mono"
-                  />
-                  {!isCronValid(tr.expression) && (
-                    <p className="text-xs text-destructive mt-1">Cron deve ter 5 campos</p>
-                  )}
-                </div>
-              </div>
+              <FrequencyPicker
+                expression={tr.expression}
+                onChange={(expr) => updateTrigger({ type: "cron", expression: expr })}
+              />
             );
           })()}
 
           {d.trigger.type === "metric" && (() => {
             const tr = d.trigger as Extract<AutomationTrigger, { type: "metric" }>;
+            const monetary = isMetricMonetary(tr.metric);
             return (
-              <div className="grid grid-cols-3 gap-2">
-                <Select value={tr.metric} onValueChange={(v) => updateTrigger({ ...tr, metric: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {METRICS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={tr.operator} onValueChange={(v) => updateTrigger({ ...tr, operator: v as typeof tr.operator })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["lt", "lte", "eq", "gte", "gt"] as const).map((op) => (
-                      <SelectItem key={op} value={op}>{op}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  value={tr.value}
-                  onChange={(e) => updateTrigger({ ...tr, value: Number(e.target.value) })}
-                  className="font-mono tabular-nums"
-                />
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Qual número monitorar</Label>
+                  <MetricSelect value={tr.metric} onChange={(v) => updateTrigger({ ...tr, metric: v })} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Quando ele ficar</Label>
+                    <Select value={tr.operator} onValueChange={(v) => updateTrigger({ ...tr, operator: v as typeof tr.operator })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(["lt", "lte", "eq", "gte", "gt"] as const).map((op) => (
+                          <SelectItem key={op} value={op}>{NUMBER_OPERATOR_LABELS[op]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Valor</Label>
+                    {monetary ? (
+                      <MoneyInput value={tr.value} onChange={(v) => updateTrigger({ ...tr, value: v })} />
+                    ) : (
+                      <Input
+                        type="number"
+                        value={tr.value}
+                        onChange={(e) => updateTrigger({ ...tr, value: Number(e.target.value) })}
+                        className="tabular-nums"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })()}
 
           {d.trigger.type === "manual" && (
-            <p className="text-xs text-muted-foreground">Executada apenas via "Executar agora" ou pelo Marcos no chat.</p>
+            <p className="text-xs text-muted-foreground">
+              Roda apenas quando você clicar em "Executar agora" ou pedir pro Marcos no chat.
+            </p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Condições</CardTitle>
-          <Button size="sm" variant="ghost" onClick={addCondition} className="h-7 gap-1">
-            <Plus className="h-3.5 w-3.5" /> Adicionar
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {d.conditions.length === 0 && (
-            <p className="text-xs text-muted-foreground">Sem condições — todos os triggers passam.</p>
-          )}
-          {d.conditions.map((c, i) => (
-            <div key={i} className="grid grid-cols-[1fr_100px_1fr_auto] gap-2">
-              <Input
-                placeholder="campo (ex: amount_brl)"
-                value={c.field}
-                onChange={(e) => patchCondition(i, { field: e.target.value })}
-                className="font-mono text-sm"
-              />
-              <Select value={c.op} onValueChange={(v) => patchCondition(i, { op: v as AutomationCondition["op"] })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(["eq", "neq", "gt", "gte", "lt", "lte", "contains", "in"] as const).map((op) => (
-                    <SelectItem key={op} value={op}>{op}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="valor"
-                value={String(c.value ?? "")}
-                onChange={(e) => patchCondition(i, { value: e.target.value })}
-                className="font-mono text-sm"
-              />
-              <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => removeCondition(i)}>
-                <X className="h-4 w-4" />
+      <Collapsible open={conditionsOpen} onOpenChange={setConditionsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <button type="button" className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 transition-colors">
+              <div>
+                <div className="text-sm font-medium flex items-center gap-1.5">
+                  <ChevronRight className={`h-4 w-4 transition-transform ${conditionsOpen ? "rotate-90" : ""}`} />
+                  Adicionar regras avançadas (opcional)
+                  {d.conditions.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-[10px]">{d.conditions.length}</Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5 ml-5">
+                  Filtros adicionais sobre os dados do gatilho. Use só se precisar limitar quando a automação roda.
+                </p>
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-2 pt-0">
+              {d.conditions.map((c, i) => (
+                <div key={i} className="grid grid-cols-[1fr_140px_1fr_auto] gap-2 items-end">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Campo</Label>
+                    <MetricSelect value={c.field} onChange={(v) => patchCondition(i, { field: v })} />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Comparação</Label>
+                    <Select value={c.op} onValueChange={(v) => patchCondition(i, { op: v as AutomationCondition["op"] })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(["eq", "neq", "gt", "gte", "lt", "lte", "contains", "in"] as const).map((op) => (
+                          <SelectItem key={op} value={op}>{NUMBER_OPERATOR_LABELS[op] ?? op}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Valor</Label>
+                    {isMetricMonetary(c.field) ? (
+                      <MoneyInput
+                        value={Number(c.value) || 0}
+                        onChange={(v) => patchCondition(i, { value: v })}
+                      />
+                    ) : (
+                      <Input
+                        value={String(c.value ?? "")}
+                        onChange={(e) => patchCondition(i, { value: e.target.value })}
+                      />
+                    )}
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => removeCondition(i)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button size="sm" variant="ghost" onClick={addCondition} className="gap-1 mt-2">
+                <Plus className="h-3.5 w-3.5" /> Adicionar regra
               </Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Ações (em sequência)</CardTitle>
+          <CardTitle className="text-sm">O que o Marcos vai fazer</CardTitle>
           <Popover open={actionPickerOpen} onOpenChange={setActionPickerOpen}>
             <PopoverTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-7 gap-1">
-                <Plus className="h-3.5 w-3.5" /> Adicionar
+              <Button size="sm" variant="outline" className="h-8 gap-1">
+                <Plus className="h-3.5 w-3.5" /> Adicionar ação
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-0 w-72" align="end">
+            <PopoverContent className="p-0 w-80" align="end">
               <Command>
-                <CommandInput placeholder="/ tipo da ação…" />
+                <CommandInput placeholder="Buscar ação…" />
                 <CommandList>
                   <CommandEmpty>Nada encontrado</CommandEmpty>
                   <CommandGroup>
-                    {ACTION_TYPES.map((t) => (
-                      <CommandItem
-                        key={t}
-                        onSelect={() => { addAction(t); setActionPickerOpen(false); }}
-                      >
-                        <span className="font-mono text-xs">{t}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">{ACTION_LABELS[t]}</span>
-                      </CommandItem>
-                    ))}
+                    {ACTION_TYPES.map((t) => {
+                      const meta = ACTION_META[t];
+                      return (
+                        <CommandItem
+                          key={t}
+                          onSelect={() => { addAction(t); setActionPickerOpen(false); }}
+                          className="flex items-center gap-2"
+                        >
+                          <span className="text-base">{meta.icon}</span>
+                          <span className="text-sm">{meta.label}</span>
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>
@@ -559,7 +575,9 @@ function BuilderColumn(p: BuilderProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {d.actions.length === 0 && (
-            <p className="text-xs text-muted-foreground">Adicione ao menos uma ação para salvar.</p>
+            <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-md">
+              Nenhuma ação ainda. Clique em "Adicionar ação" pra começar.
+            </div>
           )}
           {d.actions.map((a, i) => (
             <ActionCard
@@ -567,7 +585,6 @@ function BuilderColumn(p: BuilderProps) {
               idx={i}
               total={d.actions.length}
               action={a}
-              forceConfirm={d.require_confirmation}
               onMove={moveAction}
               onRemove={removeAction}
               onPatch={patchAction}
@@ -578,8 +595,11 @@ function BuilderColumn(p: BuilderProps) {
 
       {testResult && (
         <Card className="border-sky-500/30 bg-sky-500/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs uppercase tracking-wider text-sky-300">Preview do teste</CardTitle>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm">Preview do teste</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { /* no-op handled by re-test */ }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
           </CardHeader>
           <CardContent>
             <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
@@ -593,32 +613,34 @@ function BuilderColumn(p: BuilderProps) {
 }
 
 function ActionCard({
-  idx, total, action, forceConfirm, onMove, onRemove, onPatch,
+  idx, total, action, onMove, onRemove, onPatch,
 }: {
-  idx: number; total: number; action: AutomationAction; forceConfirm: boolean;
+  idx: number; total: number; action: AutomationAction;
   onMove: (i: number, d: -1 | 1) => void;
   onRemove: (i: number) => void;
   onPatch: (i: number, p: Partial<AutomationAction>) => void;
 }) {
-  const risky = isRiskyAction(action.type) || forceConfirm;
+  const meta = ACTION_META[action.type];
+  const impactColor =
+    meta.impact === "modifies_external" ? "border-amber-500/40 text-amber-300"
+    : meta.impact === "asks_confirm" ? "border-sky-500/40 text-sky-300"
+    : "border-emerald-500/40 text-emerald-300";
+
   return (
-    <div className="rounded-md border bg-card/40 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground tabular-nums">{idx + 1}.</span>
-          <span className="font-mono text-sm truncate">{action.type}</span>
-          <span className="text-xs text-muted-foreground truncate">{ACTION_LABELS[action.type]}</span>
+    <div className="rounded-md border bg-card/40 p-3 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-xs text-muted-foreground tabular-nums mt-0.5">{idx + 1}.</span>
+          <span className="text-base shrink-0">{meta.icon}</span>
+          <div className="min-w-0">
+            <div className="font-medium text-sm">{meta.label}</div>
+            <div className="text-xs text-muted-foreground">{meta.summary(action)}</div>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          {risky ? (
-            <Badge variant="outline" className="border-amber-500/40 text-amber-300 text-[10px] gap-1">
-              <ShieldAlert className="h-3 w-3" /> exige confirmação
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 text-[10px] gap-1">
-              <Lock className="h-3 w-3" /> sem confirmação
-            </Badge>
-          )}
+        <div className="flex items-center gap-1 shrink-0">
+          <Badge variant="outline" className={`text-[10px] ${impactColor}`}>
+            {meta.impactLabel}
+          </Badge>
           <Button size="icon" variant="ghost" className="h-7 w-7" disabled={idx === 0} onClick={() => onMove(idx, -1)}>
             <ArrowUp className="h-3.5 w-3.5" />
           </Button>
@@ -635,130 +657,233 @@ function ActionCard({
   );
 }
 
+function TextareaWithVariables({
+  value, onChange, rows = 3, placeholder,
+}: {
+  value: string; onChange: (v: string) => void; rows?: number; placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  function insert(token: string) {
+    const el = ref.current;
+    if (!el) { onChange(value + token); return; }
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + token + value.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + token.length, start + token.length);
+    });
+  }
+  return (
+    <div className="space-y-2">
+      <Textarea
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+      />
+      <VariablePills onInsert={insert} />
+    </div>
+  );
+}
+
 function ActionFields({ action, onPatch }: { action: AutomationAction; onPatch: (p: Partial<AutomationAction>) => void }) {
   switch (action.type) {
     case "send_report":
       return (
-        <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs text-muted-foreground">Qual relatório enviar</Label>
           <Select value={action.report_type} onValueChange={(v) => onPatch({ report_type: v as never })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {(["cash", "pipeline", "cobranca", "dashboard"] as const).map((r) => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
+              <SelectItem value="cash">Caixa (saldo + projeção)</SelectItem>
+              <SelectItem value="pipeline">Pipeline de vendas</SelectItem>
+              <SelectItem value="cobranca">Cobrança / inadimplência</SelectItem>
+              <SelectItem value="dashboard">Dashboard completo</SelectItem>
             </SelectContent>
           </Select>
-          <Input value={action.deliver_to} disabled className="font-mono text-xs" />
         </div>
       );
+
     case "send_whatsapp":
       return (
-        <div className="space-y-2">
-          <Input
-            placeholder="owner ou +5511..."
-            value={action.to}
-            onChange={(e) => onPatch({ to: e.target.value })}
-            className="font-mono text-sm"
-          />
-          <Textarea
-            placeholder="Mensagem. Pode usar {{trigger.X}} e {{kpis.Y}}"
-            value={action.template}
-            onChange={(e) => onPatch({ template: e.target.value })}
-            rows={3}
-            className="font-mono text-xs"
-          />
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs text-muted-foreground">Pra quem enviar</Label>
+            <Select
+              value={/^owner$/.test(action.to) ? "owner" : "other"}
+              onValueChange={(v) => onPatch({ to: v === "owner" ? "owner" : action.to === "owner" ? "" : action.to })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="owner">Pra mim (dono)</SelectItem>
+                <SelectItem value="other">Pra outro número</SelectItem>
+              </SelectContent>
+            </Select>
+            {action.to !== "owner" && (
+              <Input
+                placeholder="+5511999999999"
+                value={action.to}
+                onChange={(e) => onPatch({ to: e.target.value })}
+                className="mt-2 font-mono text-sm"
+              />
+            )}
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Mensagem</Label>
+            <TextareaWithVariables
+              value={action.template}
+              onChange={(v) => onPatch({ template: v })}
+              placeholder="Ex: Saldo abaixo do esperado: {{kpis.balance_brl}}"
+            />
+          </div>
         </div>
       );
+
     case "crm_update_deal":
       return (
         <div className="space-y-2">
-          <Input
-            placeholder="deal_id (ex: {{trigger.deal_id}})"
-            value={action.deal_id}
-            onChange={(e) => onPatch({ deal_id: e.target.value })}
-            className="font-mono text-sm"
-          />
-          <JsonField
-            label="fields (JSON)"
+          <div>
+            <Label className="text-xs text-muted-foreground">ID do deal a atualizar</Label>
+            <Input
+              placeholder="ex: {{trigger.deal_id}}"
+              value={action.deal_id}
+              onChange={(e) => onPatch({ deal_id: e.target.value })}
+              className="font-mono text-sm"
+            />
+          </div>
+          <AdvancedJson
+            label="Campos a atualizar (avançado)"
             value={action.fields}
             onChange={(v) => onPatch({ fields: v as Record<string, unknown> })}
           />
         </div>
       );
+
     case "crm_create_task":
       return (
-        <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="título" value={action.title} onChange={(e) => onPatch({ title: e.target.value })} />
-          <Input placeholder="due_date" value={action.due_date ?? ""} onChange={(e) => onPatch({ due_date: e.target.value })} className="font-mono text-sm" />
-          <Input placeholder="related_to" value={action.related_to ?? ""} onChange={(e) => onPatch({ related_to: e.target.value })} className="col-span-2 font-mono text-sm" />
+        <div className="space-y-2">
+          <div>
+            <Label className="text-xs text-muted-foreground">Título da tarefa</Label>
+            <Input value={action.title} onChange={(e) => onPatch({ title: e.target.value })} placeholder="Ex: Ligar pro cliente" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs text-muted-foreground">Vencimento</Label>
+              <Input type="date" value={action.due_date ?? ""} onChange={(e) => onPatch({ due_date: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Relacionado a (opcional)</Label>
+              <Input value={action.related_to ?? ""} onChange={(e) => onPatch({ related_to: e.target.value })} placeholder="ex: deal_id" />
+            </div>
+          </div>
         </div>
       );
+
     case "erp_create_invoice":
       return (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="customer" value={action.customer} onChange={(e) => onPatch({ customer: e.target.value })} />
-            <Input placeholder="due_date" value={action.due_date} onChange={(e) => onPatch({ due_date: e.target.value })} className="font-mono text-sm" />
+            <div>
+              <Label className="text-xs text-muted-foreground">Cliente</Label>
+              <Input value={action.customer} onChange={(e) => onPatch({ customer: e.target.value })} placeholder="Nome ou ID" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Vencimento</Label>
+              <Input type="date" value={action.due_date} onChange={(e) => onPatch({ due_date: e.target.value })} />
+            </div>
           </div>
-          <JsonField label="items (JSON array)" value={action.items} onChange={(v) => onPatch({ items: Array.isArray(v) ? v : [] })} />
+          <AdvancedJson
+            label="Itens da fatura (avançado)"
+            value={action.items}
+            onChange={(v) => onPatch({ items: Array.isArray(v) ? v : [] })}
+          />
         </div>
       );
+
     case "cobranca_send":
       return (
         <div className="grid grid-cols-3 gap-2">
-          <Input placeholder="customer_id" value={action.customer_id} onChange={(e) => onPatch({ customer_id: e.target.value })} className="font-mono text-sm" />
-          <Input type="number" placeholder="amount" value={action.amount} onChange={(e) => onPatch({ amount: Number(e.target.value) })} className="font-mono tabular-nums" />
-          <Input placeholder="due_date" value={action.due_date} onChange={(e) => onPatch({ due_date: e.target.value })} className="font-mono text-sm" />
+          <div>
+            <Label className="text-xs text-muted-foreground">Cliente</Label>
+            <Input value={action.customer_id} onChange={(e) => onPatch({ customer_id: e.target.value })} placeholder="ID" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Valor</Label>
+            <MoneyInput value={action.amount} onChange={(v) => onPatch({ amount: v })} />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Vencimento</Label>
+            <Input type="date" value={action.due_date} onChange={(e) => onPatch({ due_date: e.target.value })} />
+          </div>
         </div>
       );
+
     case "ask_owner_confirm":
       return (
-        <Textarea
-          value={action.question}
-          onChange={(e) => onPatch({ question: e.target.value })}
-          rows={2}
-          placeholder="Pergunta ao dono"
-        />
+        <div>
+          <Label className="text-xs text-muted-foreground">Pergunta que o Marcos vai te fazer</Label>
+          <TextareaWithVariables
+            value={action.question}
+            onChange={(v) => onPatch({ question: v })}
+            rows={2}
+            placeholder="Ex: Posso enviar o relatório de caixa pro WhatsApp?"
+          />
+        </div>
       );
+
     case "ai_decide":
       return (
         <div className="space-y-2">
-          <Textarea value={action.context} onChange={(e) => onPatch({ context: e.target.value })} rows={2} placeholder="Contexto" />
-          <Input
-            value={action.options.join(", ")}
-            onChange={(e) => onPatch({ options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
-            placeholder="opções separadas por vírgula"
-            className="font-mono text-sm"
-          />
+          <div>
+            <Label className="text-xs text-muted-foreground">Contexto pra IA decidir</Label>
+            <Textarea value={action.context} onChange={(e) => onPatch({ context: e.target.value })} rows={2} />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Opções (separadas por vírgula)</Label>
+            <Input
+              value={action.options.join(", ")}
+              onChange={(e) => onPatch({ options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+              placeholder="ex: enviar agora, esperar amanhã, ignorar"
+            />
+          </div>
         </div>
       );
   }
 }
 
-function JsonField({ label, value, onChange }: { label: string; value: unknown; onChange: (v: unknown) => void }) {
+function AdvancedJson({ label, value, onChange }: { label: string; value: unknown; onChange: (v: unknown) => void }) {
+  const [open, setOpen] = useState(false);
   const [text, setText] = useState(() => JSON.stringify(value ?? {}, null, 2));
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { setText(JSON.stringify(value ?? {}, null, 2)); }, [value]);
   return (
-    <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Textarea
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          try {
-            const parsed = JSON.parse(e.target.value);
-            setErr(null);
-            onChange(parsed);
-          } catch (ex) {
-            setErr((ex as Error).message);
-          }
-        }}
-        rows={4}
-        className="font-mono text-xs"
-      />
-      {err && <p className="text-xs text-destructive mt-1">{err}</p>}
-    </div>
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button type="button" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+          <ChevronRight className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`} />
+          {label}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <Textarea
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            try {
+              const parsed = JSON.parse(e.target.value);
+              setErr(null);
+              onChange(parsed);
+            } catch (ex) { setErr((ex as Error).message); }
+          }}
+          rows={4}
+          className="font-mono text-xs mt-2"
+        />
+        {err && <p className="text-xs text-destructive mt-1">{err}</p>}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -766,32 +891,35 @@ function RunsColumn({ runs }: { runs: AutomationRun[] }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Histórico de execuções</CardTitle>
+        <CardTitle className="text-sm">Histórico de execuções</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 max-h-[70vh] overflow-y-auto">
         {runs.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma execução ainda.</p>}
         {runs.map((r) => (
           <div key={r.id} className="rounded-md border bg-card/40 p-3 space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-xs gap-2">
               <span className="flex items-center gap-1.5 font-medium">
                 {statusIcon(r.status)}
-                {r.status}
+                {RUN_STATUS_LABEL[r.status] ?? r.status}
               </span>
-              <span className="text-muted-foreground tabular-nums">{formatRelative(r.started_at)}</span>
+              <span className="text-muted-foreground tabular-nums shrink-0">{formatRelative(r.started_at)}</span>
             </div>
-            {r.error && <p className="text-xs text-destructive font-mono">{r.error}</p>}
+            {r.error && <p className="text-xs text-destructive">{r.error}</p>}
             {r.steps?.length > 0 && (
-              <div className="space-y-1">
-                {r.steps.map((s, i) => (
-                  <div key={i} className="text-[11px] font-mono text-muted-foreground flex items-center gap-1.5">
-                    <span className={s.status === "succeeded" ? "text-emerald-400" : s.status === "failed" ? "text-destructive" : ""}>
-                      {s.status === "succeeded" ? "✓" : s.status === "failed" ? "✗" : "·"}
-                    </span>
-                    {s.action_type}
-                    {typeof s.duration_ms === "number" && <span className="tabular-nums">({s.duration_ms}ms)</span>}
-                    {s.error && <span className="text-destructive truncate">— {s.error}</span>}
-                  </div>
-                ))}
+              <div className="space-y-1 pt-1">
+                {r.steps.map((s, i) => {
+                  const meta = ACTION_META[s.action_type as AutomationActionType];
+                  return (
+                    <div key={i} className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <span className={s.status === "succeeded" ? "text-emerald-400" : s.status === "failed" ? "text-destructive" : ""}>
+                        {s.status === "succeeded" ? "✓" : s.status === "failed" ? "✗" : "·"}
+                      </span>
+                      <span>{meta?.icon} {meta?.label ?? s.action_type}</span>
+                      {typeof s.duration_ms === "number" && <span className="tabular-nums">({s.duration_ms}ms)</span>}
+                      {s.error && <span className="text-destructive truncate">— {s.error}</span>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -800,3 +928,4 @@ function RunsColumn({ runs }: { runs: AutomationRun[] }) {
     </Card>
   );
 }
+
