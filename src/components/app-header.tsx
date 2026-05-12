@@ -72,17 +72,23 @@ export function AppHeader() {
       <div className="hidden sm:block text-sm text-muted-foreground truncate max-w-[200px]">{email}</div>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openOpenclawDashboard}
-            disabled={loadingDash}
-          >
-            {loadingDash ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Terminal className="h-4 w-4 sm:mr-2" />}
-            <span className="hidden sm:inline">OpenClaw</span>
-          </Button>
+          <span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openOpenclawDashboard}
+              disabled={loadingDash || !dashAvailable}
+            >
+              {loadingDash ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Terminal className="h-4 w-4 sm:mr-2" />}
+              <span className="hidden sm:inline">OpenClaw</span>
+            </Button>
+          </span>
         </TooltipTrigger>
-        <TooltipContent>Abrir dashboard do agente (OpenClaw)</TooltipContent>
+        <TooltipContent>
+          {dashAvailable
+            ? "Abrir dashboard do agente (OpenClaw)"
+            : "Dashboard indisponível — rode setup.sh na VPS para habilitar"}
+        </TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
