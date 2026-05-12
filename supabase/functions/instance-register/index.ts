@@ -4,7 +4,7 @@
  * Upsert por hostname (single-tenant: 1 deploy = 1 empresa).
  *
  * Auth: X-Panel-Token
- * Body: { hostname, openclaw_version, agente_cfo_version, ingress_url, hooks_token }
+ * Body: { hostname, openclaw_version, agente_cfo_version, ingress_url, hooks_token, openclaw_dashboard_token }
  * Retorna: { instance_id }
  */
 
@@ -35,6 +35,7 @@ Deno.serve(async (req: Request) => {
     agente_cfo_version?: string;
     ingress_url?: string;
     hooks_token?: string;
+    openclaw_dashboard_token?: string;
   };
 
   try {
@@ -51,6 +52,7 @@ Deno.serve(async (req: Request) => {
     agente_cfo_version: body.agente_cfo_version ?? null,
     ingress_url: body.ingress_url ?? null,
     hooks_token: body.hooks_token ?? null,
+    openclaw_dashboard_token: body.openclaw_dashboard_token ?? null,
     last_heartbeat: new Date().toISOString(),
     status: "online",
   };

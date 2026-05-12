@@ -75,6 +75,10 @@ verify_jwt = true
 [functions.nuvemshop-push-tokens]
 verify_jwt = true
 
+# OpenClaw dashboard redirect (Sprint 18)
+[functions.openclaw-dashboard-url]
+verify_jwt = true
+
 # Comando Central (Sprint 16)
 [functions.dashboard-snapshot]
 verify_jwt = true
