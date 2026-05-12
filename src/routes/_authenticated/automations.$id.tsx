@@ -929,5 +929,3 @@ function RunsColumn({ runs }: { runs: AutomationRun[] }) {
   );
 }
 
-// silence unused
-void useMemo; void metricLabel;
