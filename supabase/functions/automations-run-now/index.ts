@@ -57,18 +57,15 @@ Deno.serve(async (req: Request) => {
 
   const supabase = adminClient();
 
-  // Verifica ownership
+  // Verifica existência (single-tenant)
   const { data: automation } = await supabase
     .from("automations")
-    .select("id, user_id, name")
+    .select("id, name")
     .eq("id", body.automation_id)
     .maybeSingle();
 
   if (!automation) {
     return errorResponse("Automação não encontrada", 404);
-  }
-  if (automation.user_id !== user.id) {
-    return errorResponse("Sem permissão", 403);
   }
 
   // Cria run — o engine vai pegar na próxima iteração
@@ -76,7 +73,6 @@ Deno.serve(async (req: Request) => {
     .from("automation_runs")
     .insert({
       automation_id: body.automation_id,
-      user_id: user.id,
       status: "running",
       trigger_payload: { type: "manual" },
       steps: [],

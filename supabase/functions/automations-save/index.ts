@@ -92,18 +92,15 @@ Deno.serve(async (req: Request) => {
   };
 
   if (body.id) {
-    // UPDATE — verifica ownership
+    // UPDATE — single-tenant, sem checagem de user_id
     const { data: existing } = await supabase
       .from("automations")
-      .select("id, user_id")
+      .select("id")
       .eq("id", body.id)
       .maybeSingle();
 
     if (!existing) {
       return errorResponse("Automação não encontrada", 404);
-    }
-    if (existing.user_id !== user.id) {
-      return errorResponse("Sem permissão para editar esta automação", 403);
     }
 
     const { data, error } = await supabase
@@ -119,10 +116,10 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(data);
   } else {
-    // INSERT
+    // INSERT (single-tenant)
     const { data, error } = await supabase
       .from("automations")
-      .insert({ ...record, user_id: user.id })
+      .insert(record)
       .select()
       .single();
 
