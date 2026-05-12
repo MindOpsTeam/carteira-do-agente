@@ -80,16 +80,23 @@ function statusIcon(status?: AutomationRun["status"]) {
   return <Clock className="h-3.5 w-3.5 text-sky-400" />;
 }
 
+import { ACTION_META, describeCron, formatBRL, metricLabel, NUMBER_OPERATOR_LABELS } from "@/components/automation-builder/constants";
+
 function summarizeTrigger(t: Automation["trigger"]): string {
   if (!t) return "—";
-  if (t.type === "cron") return `cron · ${t.expression}`;
-  if (t.type === "metric") return `${t.metric} ${t.operator} ${t.value}`;
+  if (t.type === "cron") return describeCron(t.expression);
+  if (t.type === "metric") {
+    const op = NUMBER_OPERATOR_LABELS[t.operator] ?? t.operator;
+    const monetary = /brl|amount|valor|saldo/i.test(t.metric);
+    const val = monetary ? formatBRL(t.value) : String(t.value);
+    return `${metricLabel(t.metric)} ${op} ${val}`;
+  }
   return "manual";
 }
 
 function summarizeActions(actions: Automation["actions"]): string {
   if (!actions?.length) return "(sem ações)";
-  return actions.map((a) => a.type).join(" → ");
+  return actions.map((a) => `${ACTION_META[a.type].icon} ${ACTION_META[a.type].label}`).join(" → ");
 }
 
 function AutomationsListPage() {
