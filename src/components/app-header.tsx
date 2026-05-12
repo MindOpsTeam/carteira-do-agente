@@ -14,11 +14,20 @@ const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 export function AppHeader() {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
+  const [dashAvailable, setDashAvailable] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setEmail(userData.user?.email ?? "");
+
+      const { data: inst } = await supabase
+        .from("instances")
+        .select("ingress_url, openclaw_dashboard_token")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setDashAvailable(!!(inst?.ingress_url && inst?.openclaw_dashboard_token));
     })();
   }, []);
 
@@ -63,17 +72,23 @@ export function AppHeader() {
       <div className="hidden sm:block text-sm text-muted-foreground truncate max-w-[200px]">{email}</div>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openOpenclawDashboard}
-            disabled={loadingDash}
-          >
-            {loadingDash ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Terminal className="h-4 w-4 sm:mr-2" />}
-            <span className="hidden sm:inline">OpenClaw</span>
-          </Button>
+          <span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openOpenclawDashboard}
+              disabled={loadingDash || !dashAvailable}
+            >
+              {loadingDash ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Terminal className="h-4 w-4 sm:mr-2" />}
+              <span className="hidden sm:inline">OpenClaw</span>
+            </Button>
+          </span>
         </TooltipTrigger>
-        <TooltipContent>Abrir dashboard do agente (OpenClaw)</TooltipContent>
+        <TooltipContent>
+          {dashAvailable
+            ? "Abrir dashboard do agente (OpenClaw)"
+            : "Dashboard indisponível — rode setup.sh na VPS para habilitar"}
+        </TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
