@@ -82,6 +82,15 @@ function statusIcon(status?: AutomationRun["status"]) {
 
 import { ACTION_META, describeCron, formatBRL, metricLabel, NUMBER_OPERATOR_LABELS } from "@/components/automation-builder/constants";
 
+const RUN_STATUS_LABEL_SHORT: Record<string, string> = {
+  succeeded: "✓ executou",
+  failed: "✗ falhou",
+  pending_confirm: "⏳ aguarda confirmação",
+  running: "⚙️ rodando",
+  cancelled: "✕ cancelada",
+  expired: "⌛ expirada",
+};
+
 function summarizeTrigger(t: Automation["trigger"]): string {
   if (!t) return "—";
   if (t.type === "cron") return describeCron(t.expression);
