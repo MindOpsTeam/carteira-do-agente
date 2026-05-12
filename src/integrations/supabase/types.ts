@@ -295,6 +295,7 @@ export type Database = {
           id: string
           ingress_url: string | null
           last_heartbeat: string | null
+          openclaw_dashboard_token: string | null
           openclaw_version: string | null
           status: string
         }
@@ -307,6 +308,7 @@ export type Database = {
           id?: string
           ingress_url?: string | null
           last_heartbeat?: string | null
+          openclaw_dashboard_token?: string | null
           openclaw_version?: string | null
           status?: string
         }
@@ -319,6 +321,7 @@ export type Database = {
           id?: string
           ingress_url?: string | null
           last_heartbeat?: string | null
+          openclaw_dashboard_token?: string | null
           openclaw_version?: string | null
           status?: string
         }
