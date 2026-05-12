@@ -85,8 +85,18 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // 3. Dispara o hook
+  // 3. Dispara o hook (com instruções pro Marcos responder via panel_reply.sh)
   let runId = `run_${Date.now()}_${userMsg.id}`;
+  const promptMsg = `[PANEL_CHAT]
+Usuário (painel web): ${content}
+
+Você é Marcos, CFO virtual da empresa. Responda diretamente em português, claro e sem rodeios. Use as ferramentas disponíveis (bash, scripts da skill) se precisar consultar dados reais (saldo, contas, deals, etc).
+
+IMPORTANTE — ao terminar, GRAVE sua resposta no painel executando:
+  bash $HOME/.openclaw/workspace/skills/agente-cfo/scripts/panel_reply.sh "${threadId}" "${runId}" "<sua resposta aqui>" "sent"
+
+Substitua <sua resposta aqui> pela mensagem final que quer mostrar ao usuário no chat (use aspas duplas e escape com \\" se houver aspas no texto). Não envie nada por WhatsApp — apenas o painel.`;
+
   try {
     const resp = await fetch(`${instance.ingress_url}/hooks/agent`, {
       method: "POST",
@@ -95,11 +105,11 @@ Deno.serve(async (req: Request) => {
         "Authorization": `Bearer ${instance.hooks_token}`,
       },
       body: JSON.stringify({
-        message: content,
+        message: promptMsg,
         name: "panel_chat",
         wakeMode: "now",
         deliver: false,
-        timeoutSeconds: 60,
+        timeoutSeconds: 120,
         metadata: {
           thread_id: threadId,
           user_email: user.email,
