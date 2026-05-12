@@ -14,11 +14,20 @@ const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 export function AppHeader() {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
+  const [dashAvailable, setDashAvailable] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setEmail(userData.user?.email ?? "");
+
+      const { data: inst } = await supabase
+        .from("instances")
+        .select("ingress_url, openclaw_dashboard_token")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setDashAvailable(!!(inst?.ingress_url && inst?.openclaw_dashboard_token));
     })();
   }, []);
 
