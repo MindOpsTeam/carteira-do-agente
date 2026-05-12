@@ -46,11 +46,10 @@ Deno.serve(async (req: Request) => {
 
   const supabase = adminClient();
 
-  // Busca automações do usuário
+  // Busca todas as automações (single-tenant)
   const { data: automations, error: automationsError } = await supabase
     .from("automations")
     .select("*")
-    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (automationsError) {
@@ -58,7 +57,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // Para cada automação, busca o último run
-  const result = [];
+  const runs_by_automation: Record<string, unknown> = {};
   for (const automation of automations || []) {
     const { data: lastRun } = await supabase
       .from("automation_runs")
@@ -68,11 +67,8 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
 
-    result.push({
-      ...automation,
-      last_run: lastRun || null,
-    });
+    if (lastRun) runs_by_automation[automation.id] = lastRun;
   }
 
-  return jsonResponse(result);
+  return jsonResponse({ automations: automations || [], runs_by_automation });
 });
