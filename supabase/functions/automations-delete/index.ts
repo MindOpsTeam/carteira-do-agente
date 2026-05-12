@@ -57,18 +57,15 @@ Deno.serve(async (req: Request) => {
 
   const supabase = adminClient();
 
-  // Verifica ownership
+  // Verifica existência (single-tenant)
   const { data: existing } = await supabase
     .from("automations")
-    .select("id, user_id")
+    .select("id")
     .eq("id", body.automation_id)
     .maybeSingle();
 
   if (!existing) {
     return errorResponse("Automação não encontrada", 404);
-  }
-  if (existing.user_id !== user.id) {
-    return errorResponse("Sem permissão para deletar esta automação", 403);
   }
 
   // Deleta runs primeiro (FK)
