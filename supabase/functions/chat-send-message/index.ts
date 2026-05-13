@@ -64,23 +64,26 @@ Deno.serve(async (req: Request) => {
     return errorResponse(`Falha ao salvar mensagem: ${userMsgErr?.message}`, 500);
   }
 
-  // 2. Pega instância online
+  // 2. Pega instância online (heartbeat fresco < 5min)
   const { data: instance } = await supabase
     .from("instances")
-    .select("id, ingress_url, hooks_token, status")
+    .select("id, ingress_url, hooks_token, status, last_heartbeat")
     .not("ingress_url", "is", null)
     .not("hooks_token", "is", null)
     .order("last_heartbeat", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
 
-  if (!instance || !instance.ingress_url || !instance.hooks_token) {
+  const lastHbMs = instance?.last_heartbeat ? new Date(instance.last_heartbeat).getTime() : 0;
+  const isFresh = Date.now() - lastHbMs < 5 * 60 * 1000;
+
+  if (!instance || !instance.ingress_url || !instance.hooks_token || !isFresh) {
     await supabase
       .from("chat_messages")
       .update({ status: "error", metadata: { error: "no_instance" } })
       .eq("id", userMsg.id);
     return errorResponse(
-      "Marcos não está disponível — sua VPS não está conectada. Verifique em /settings.",
+      "Marcos está offline — sua VPS não está conectada (sem heartbeat recente). Verifique em /settings.",
       503,
     );
   }
@@ -152,11 +155,16 @@ Substitua <sua resposta aqui> pela mensagem final que quer mostrar ao usuário n
       if (json?.runId) runId = String(json.runId);
     } catch { /* corpo opcional */ }
   } catch (err) {
+    const msg = String(err);
     await supabase
       .from("chat_messages")
-      .update({ status: "error", metadata: { error: String(err) } })
+      .update({ status: "error", metadata: { error: msg } })
       .eq("id", userMsg.id);
-    return errorResponse(`Falha ao contatar Marcos: ${String(err)}`, 502);
+    // 502/Bad Gateway do cloudflared = túnel caiu / VPS reiniciou
+    const friendly = msg.includes("502")
+      ? "Marcos está offline — o túnel da VPS caiu. Reinicie o agente na VPS ou verifique em /settings."
+      : `Falha ao contatar Marcos: ${msg}`;
+    return errorResponse(friendly, 503);
   }
 
   // 4. Placeholder do Marcos (pending)
