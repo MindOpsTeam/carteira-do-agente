@@ -327,6 +327,42 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_credentials: {
+        Row: {
+          active: boolean
+          created_at: string
+          credentials_encrypted: string
+          id: string
+          last_test_at: string | null
+          last_test_detail: string | null
+          last_test_status: string | null
+          skill_name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          credentials_encrypted: string
+          id?: string
+          last_test_at?: string | null
+          last_test_detail?: string | null
+          last_test_status?: string | null
+          skill_name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          credentials_encrypted?: string
+          id?: string
+          last_test_at?: string | null
+          last_test_detail?: string | null
+          last_test_status?: string | null
+          skill_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       llm_usage: {
         Row: {
           cost_brl: number
