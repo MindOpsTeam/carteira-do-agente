@@ -460,6 +460,45 @@ export type Database = {
         }
         Relationships: []
       }
+      supabase_projects: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          last_test_at: string | null
+          last_test_status: string | null
+          name: string
+          project_url: string
+          service_role_key_encrypted: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_test_at?: string | null
+          last_test_status?: string | null
+          name: string
+          project_url: string
+          service_role_key_encrypted: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_test_at?: string | null
+          last_test_status?: string | null
+          name?: string
+          project_url?: string
+          service_role_key_encrypted?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_onboarding: {
         Row: {
           completed_at: string | null
