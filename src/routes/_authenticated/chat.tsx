@@ -247,9 +247,9 @@ function ChatPage() {
                   }`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words ${
+                    className={`${isUser ? "max-w-[80%]" : "max-w-[90%]"} rounded-2xl px-4 py-2 text-sm break-words ${
                       isUser
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground whitespace-pre-wrap"
                         : "bg-muted text-foreground"
                     } ${draft ? "border-l-4 border-yellow-500" : ""} ${
                       m.status === "error" ? "border border-destructive/50" : ""
@@ -261,8 +261,10 @@ function ChatPage() {
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
                       </div>
+                    ) : isUser ? (
+                      <div>{m.content}</div>
                     ) : (
-                      <div className="space-y-1">{renderContent(m.content)}</div>
+                      <div className="leading-relaxed">{renderMarkdown(m.content)}</div>
                     )}
                     {conf && (
                       <div
