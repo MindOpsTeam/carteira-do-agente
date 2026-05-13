@@ -25,6 +25,7 @@ import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
 import { Route as AuthenticatedAutomationsIndexRouteImport } from './routes/_authenticated/automations.index'
 import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authenticated/settings_.rules'
+import { Route as AuthenticatedIntegrationsSupabaseRouteImport } from './routes/_authenticated/integrations.supabase'
 import { Route as AuthenticatedIntegrationsNuvemshopRouteImport } from './routes/_authenticated/integrations.nuvemshop'
 import { Route as AuthenticatedIntegrationsMercadoLivreRouteImport } from './routes/_authenticated/integrations.mercado-livre'
 import { Route as AuthenticatedIntegrationsContaazulRouteImport } from './routes/_authenticated/integrations.contaazul'
@@ -119,6 +120,12 @@ const AuthenticatedSettingsRulesRoute =
     path: '/settings/rules',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedIntegrationsSupabaseRoute =
+  AuthenticatedIntegrationsSupabaseRouteImport.update({
+    id: '/integrations/supabase',
+    path: '/integrations/supabase',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIntegrationsNuvemshopRoute =
   AuthenticatedIntegrationsNuvemshopRouteImport.update({
     id: '/integrations/nuvemshop',
@@ -198,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
+  '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
@@ -225,6 +233,7 @@ export interface FileRoutesByTo {
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
+  '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/automations': typeof AuthenticatedAutomationsIndexRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
@@ -254,6 +263,7 @@ export interface FileRoutesById {
   '/_authenticated/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   '/_authenticated/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/_authenticated/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
+  '/_authenticated/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/_authenticated/settings_/rules': typeof AuthenticatedSettingsRulesRoute
   '/_authenticated/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/integrations/contaazul'
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
+    | '/integrations/supabase'
     | '/settings/rules'
     | '/automations/'
     | '/instances/'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/integrations/contaazul'
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
+    | '/integrations/supabase'
     | '/settings/rules'
     | '/automations'
     | '/instances'
@@ -338,6 +350,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integrations/contaazul'
     | '/_authenticated/integrations/mercado-livre'
     | '/_authenticated/integrations/nuvemshop'
+    | '/_authenticated/integrations/supabase'
     | '/_authenticated/settings_/rules'
     | '/_authenticated/automations/'
     | '/_authenticated/instances/'
@@ -467,6 +480,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/rules'
       fullPath: '/settings/rules'
       preLoaderRoute: typeof AuthenticatedSettingsRulesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/integrations/supabase': {
+      id: '/_authenticated/integrations/supabase'
+      path: '/integrations/supabase'
+      fullPath: '/integrations/supabase'
+      preLoaderRoute: typeof AuthenticatedIntegrationsSupabaseRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/integrations/nuvemshop': {
@@ -617,6 +637,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegrationsContaazulRoute: typeof AuthenticatedIntegrationsContaazulRouteWithChildren
   AuthenticatedIntegrationsMercadoLivreRoute: typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   AuthenticatedIntegrationsNuvemshopRoute: typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
+  AuthenticatedIntegrationsSupabaseRoute: typeof AuthenticatedIntegrationsSupabaseRoute
   AuthenticatedSettingsRulesRoute: typeof AuthenticatedSettingsRulesRoute
   AuthenticatedAutomationsIndexRoute: typeof AuthenticatedAutomationsIndexRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
@@ -642,6 +663,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedIntegrationsMercadoLivreRouteWithChildren,
   AuthenticatedIntegrationsNuvemshopRoute:
     AuthenticatedIntegrationsNuvemshopRouteWithChildren,
+  AuthenticatedIntegrationsSupabaseRoute:
+    AuthenticatedIntegrationsSupabaseRoute,
   AuthenticatedSettingsRulesRoute: AuthenticatedSettingsRulesRoute,
   AuthenticatedAutomationsIndexRoute: AuthenticatedAutomationsIndexRoute,
   AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
@@ -661,12 +684,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
