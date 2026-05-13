@@ -71,7 +71,24 @@ Deno.serve(async (req: Request) => {
   }
 
   if (connectedIntegrations.length === 0) {
-    return errorResponse("Nenhuma integração conectada", 422);
+    // Sem integrações conectadas → retorna snapshot vazio (não é erro)
+    return jsonResponse({
+      as_of: new Date().toISOString(),
+      kpis: {
+        balance_brl: 0,
+        receivables_30d_brl: 0,
+        payables_30d_brl: 0,
+        pipeline_weighted_brl: 0,
+        ecommerce_revenue_month_brl: 0,
+        overdue_total_brl: 0,
+      },
+      by_channel_revenue_30d: [],
+      pipeline_by_stage: [],
+      cash_projection_90d: [],
+      top_debtors: [],
+      integrations_health: [],
+      empty: true,
+    });
   }
 
   // ── Cache 5 min ─────────────────────────────────────────────────────────
