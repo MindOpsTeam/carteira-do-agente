@@ -134,3 +134,22 @@ verify_jwt = true
 
 [functions.supabase-projects-vps-list]
 verify_jwt = false
+
+# Sprint 26 — Integration credentials (API key) + VPS update trigger
+[functions.integration-credentials-list]
+verify_jwt = true
+
+[functions.integration-credentials-save]
+verify_jwt = true
+
+[functions.integration-credentials-delete]
+verify_jwt = true
+
+[functions.integration-credentials-test]
+verify_jwt = true
+
+[functions.integration-credentials-vps-list]
+verify_jwt = false
+
+[functions.vps-trigger-update]
+verify_jwt = true
