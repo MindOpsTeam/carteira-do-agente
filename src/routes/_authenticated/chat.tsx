@@ -30,39 +30,42 @@ function isDraft(content: string) {
   return c.includes("confirme") && (c.includes("sim") || c.includes("não") || c.includes("nao"));
 }
 
-function renderContent(content: string) {
-  // markdown leve: **bold**, `code`, listas
-  const lines = content.split("\n");
-  return lines.map((line, idx) => {
-    const parts: Array<string | React.ReactNode> = [];
-    let remaining = line;
-    let key = 0;
-    const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
-    let lastIdx = 0;
-    let m: RegExpExecArray | null;
-    while ((m = regex.exec(remaining)) !== null) {
-      if (m.index > lastIdx) parts.push(remaining.slice(lastIdx, m.index));
-      const tok = m[0];
-      if (tok.startsWith("**")) {
-        parts.push(<strong key={`b-${idx}-${key++}`}>{tok.slice(2, -2)}</strong>);
-      } else {
-        parts.push(
-          <code key={`c-${idx}-${key++}`} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
-            {tok.slice(1, -1)}
-          </code>,
-        );
-      }
-      lastIdx = m.index + tok.length;
-    }
-    if (lastIdx < remaining.length) parts.push(remaining.slice(lastIdx));
-    const isBullet = /^\s*[-*]\s+/.test(line);
-    return (
-      <div key={idx} className={isBullet ? "pl-4 relative before:content-['•'] before:absolute before:left-0" : ""}>
-        {isBullet ? parts.map((p, i) => <span key={i}>{typeof p === "string" ? p.replace(/^\s*[-*]\s+/, "") : p}</span>) : parts}
-        {line === "" && <br />}
-      </div>
-    );
-  });
+function renderMarkdown(content: string) {
+  const normalized = content.replace(/\\n/g, "\n");
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+        ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 last:mb-0" {...props} />,
+        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 last:mb-0" {...props} />,
+        li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
+        code: ({ node, inline, className, children, ...props }: any) =>
+          inline ? (
+            <code className="bg-background/40 px-1 py-0.5 rounded text-xs font-mono" {...props}>
+              {children}
+            </code>
+          ) : (
+            <pre className="bg-background/40 p-2 rounded text-xs font-mono overflow-x-auto my-2">
+              <code {...props}>{children}</code>
+            </pre>
+          ),
+        strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+        a: ({ node, ...props }) => (
+          <a className="underline text-primary" target="_blank" rel="noreferrer" {...props} />
+        ),
+        table: ({ node, ...props }) => (
+          <div className="overflow-x-auto my-2">
+            <table className="text-xs border-collapse" {...props} />
+          </div>
+        ),
+        th: ({ node, ...props }) => <th className="border px-2 py-1 bg-background/40" {...props} />,
+        td: ({ node, ...props }) => <td className="border px-2 py-1" {...props} />,
+      }}
+    >
+      {normalized}
+    </ReactMarkdown>
+  );
 }
 
 function ChatPage() {
