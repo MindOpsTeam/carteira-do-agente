@@ -215,7 +215,28 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Como editar configuração */}
+      {/* WhatsApp / Evolution */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp · Evolution API
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Configure o servidor Evolution e gerencie múltiplas linhas de WhatsApp para conversar com o Marcos.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/settings/whatsapp">
+              Gerenciar WhatsApp
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
