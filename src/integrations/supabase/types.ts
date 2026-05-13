@@ -222,6 +222,45 @@ export type Database = {
           },
         ]
       }
+      evolution_config: {
+        Row: {
+          active: boolean
+          api_key_encrypted: string
+          base_url: string
+          created_at: string
+          id: string
+          last_test_at: string | null
+          last_test_detail: string | null
+          last_test_status: string | null
+          updated_at: string
+          webhook_secret: string
+        }
+        Insert: {
+          active?: boolean
+          api_key_encrypted: string
+          base_url: string
+          created_at?: string
+          id?: string
+          last_test_at?: string | null
+          last_test_detail?: string | null
+          last_test_status?: string | null
+          updated_at?: string
+          webhook_secret: string
+        }
+        Update: {
+          active?: boolean
+          api_key_encrypted?: string
+          base_url?: string
+          created_at?: string
+          id?: string
+          last_test_at?: string | null
+          last_test_detail?: string | null
+          last_test_status?: string | null
+          updated_at?: string
+          webhook_secret?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           active: boolean
@@ -559,6 +598,48 @@ export type Database = {
           data?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_instances: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          instance_name: string
+          last_seen: string | null
+          metadata: Json | null
+          phone_number: string | null
+          qr_code_b64: string | null
+          receives_marcos_chat: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          instance_name: string
+          last_seen?: string | null
+          metadata?: Json | null
+          phone_number?: string | null
+          qr_code_b64?: string | null
+          receives_marcos_chat?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          instance_name?: string
+          last_seen?: string | null
+          metadata?: Json | null
+          phone_number?: string | null
+          qr_code_b64?: string | null
+          receives_marcos_chat?: boolean
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
