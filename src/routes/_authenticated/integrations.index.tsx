@@ -21,6 +21,7 @@ type IntegrationDef = {
 };
 
 const INTEGRATIONS: IntegrationDef[] = [
+  { key: "supabase", name: "Supabase", description: "Conecte N projetos Supabase — Marcos acessa dados, executa SQL e deploya functions via MCP.", managed: true, href: "/integrations/supabase" },
   { key: "bling", name: "Bling", description: "ERP e e-commerce — fluxo de caixa, pedidos, NF-e.", managed: true, href: "/integrations/bling" },
   { key: "contaazul", name: "ContaAzul", description: "Gestão financeira — fluxo de caixa, contas a pagar/receber.", managed: true, href: "/integrations/contaazul" },
   { key: "mercado_livre", name: "Mercado Livre", description: "Marketplace — pedidos, vendas e estoque.", managed: true, href: "/integrations/mercado-livre" },

@@ -118,3 +118,19 @@ verify_jwt = true
 
 [functions.automations-templates-list]
 verify_jwt = true
+
+# Sprint 25 — Conexões Supabase multi-projeto
+[functions.supabase-projects-list]
+verify_jwt = true
+
+[functions.supabase-projects-save]
+verify_jwt = true
+
+[functions.supabase-projects-delete]
+verify_jwt = true
+
+[functions.supabase-projects-test]
+verify_jwt = true
+
+[functions.supabase-projects-vps-list]
+verify_jwt = false
