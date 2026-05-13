@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Terminal, Server, HelpCircle } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import { LogOut, Terminal, Server, HelpCircle, MessageCircle, ChevronRight } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/format";
 
