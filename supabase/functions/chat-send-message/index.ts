@@ -155,11 +155,16 @@ Substitua <sua resposta aqui> pela mensagem final que quer mostrar ao usuário n
       if (json?.runId) runId = String(json.runId);
     } catch { /* corpo opcional */ }
   } catch (err) {
+    const msg = String(err);
     await supabase
       .from("chat_messages")
-      .update({ status: "error", metadata: { error: String(err) } })
+      .update({ status: "error", metadata: { error: msg } })
       .eq("id", userMsg.id);
-    return errorResponse(`Falha ao contatar Marcos: ${String(err)}`, 502);
+    // 502/Bad Gateway do cloudflared = túnel caiu / VPS reiniciou
+    const friendly = msg.includes("502")
+      ? "Marcos está offline — o túnel da VPS caiu. Reinicie o agente na VPS ou verifique em /settings."
+      : `Falha ao contatar Marcos: ${msg}`;
+    return errorResponse(friendly, 503);
   }
 
   // 4. Placeholder do Marcos (pending)
