@@ -85,12 +85,37 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // 2b. Busca contexto de MCPs/integrações ativas pra Marcos saber o que pode consultar
+  const { data: supabaseProjects } = await supabase
+    .from("supabase_projects")
+    .select("name, project_url")
+    .eq("active", true);
+  const { data: integrationCreds } = await supabase
+    .from("integration_credentials")
+    .select("skill_name")
+    .eq("active", true);
+
+  const slugify = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const supaCtx = (supabaseProjects ?? []).map((p) =>
+    `- supabase_${slugify(p.name)} (${p.name}): MCP server oficial Supabase em ${p.project_url}. Tools: execute_sql, list_tables, list_extensions, get_advisors, apply_migration, deploy_edge_function, get_logs, get_project_url, list_organizations, etc.`
+  ).join("\n");
+  const integCtx = (integrationCreds ?? []).map((c) => `- skill ${c.skill_name}: scripts em $HOME/.openclaw/workspace/skills/${c.skill_name}/`).join("\n");
+
+  const contextBlock = (supaCtx || integCtx) ? `
+
+CONTEXTO — FERRAMENTAS DISPONÍVEIS AGORA:
+${supaCtx ? "\n[MCP servers Supabase conectados pelo dono — use essas tools pra responder perguntas sobre os bancos do dono]\n" + supaCtx : ""}${integCtx ? "\n[Integrações com credenciais ativas — use os scripts/clients locais]\n" + integCtx : ""}
+
+` : "";
+
   // 3. Dispara o hook (com instruções pro Marcos responder via panel_reply.sh)
   let runId = `run_${Date.now()}_${userMsg.id}`;
   const promptMsg = `[PANEL_CHAT]
 Usuário (painel web): ${content}
 
-Você é Marcos, CFO virtual da empresa. Responda diretamente em português, claro e sem rodeios. Use as ferramentas disponíveis (bash, scripts da skill) se precisar consultar dados reais (saldo, contas, deals, etc).
+Você é Marcos, CFO virtual da empresa. Responda diretamente em português, claro e sem rodeios. Use as ferramentas disponíveis (bash, scripts da skill, MCP servers) se precisar consultar dados reais.
+${contextBlock}
+Quando o usuário perguntar sobre um banco/projeto Supabase específico (pelo nome), use as tools do MCP \`supabase_<slug>\` correspondente (não confunda com o banco do PAINEL CFO em odhcfrgydjluxunhvojp.supabase.co — esse é interno e você NÃO deve consultar a menos que seja explicitamente pedido).
 
 IMPORTANTE — ao terminar, GRAVE sua resposta no painel executando:
   bash $HOME/.openclaw/workspace/skills/agente-cfo/scripts/panel_reply.sh "${threadId}" "${runId}" "<sua resposta aqui>" "sent"

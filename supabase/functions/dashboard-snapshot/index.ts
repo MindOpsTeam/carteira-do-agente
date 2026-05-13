@@ -59,7 +59,16 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Instância não encontrada ou sem ingress_url/hooks_token", 422);
   }
 
-  const connectedIntegrations: string[] = instance.connected_integrations ?? [];
+  // connected_integrations pode vir como array (legado) ou jsonb objeto { omie: true, hubspot: false }
+  let connectedIntegrations: string[] = [];
+  const ci = instance.connected_integrations;
+  if (Array.isArray(ci)) {
+    connectedIntegrations = ci.filter((x) => typeof x === "string");
+  } else if (ci && typeof ci === "object") {
+    connectedIntegrations = Object.entries(ci)
+      .filter(([, v]) => Boolean(v))
+      .map(([k]) => k);
+  }
 
   if (connectedIntegrations.length === 0) {
     return errorResponse("Nenhuma integração conectada", 422);
