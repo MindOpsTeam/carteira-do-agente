@@ -112,16 +112,8 @@ export const INTEGRATIONS_SPEC: IntegrationSpec[] = [
     name: "HubSpot",
     description: "CRM + marketing — pipelines, contatos, deals.",
     category: "crm",
-    auth_mode: "api_key",
-    fields: [
-      {
-        key: "HUBSPOT_ACCESS_TOKEN",
-        label: "Private App Token",
-        type: "password",
-        required: true,
-        help: "Crie em developers.hubspot.com → Private Apps → Create",
-      },
-    ],
+    auth_mode: "oauth",
+    oauth_route: "/integrations/hubspot",
     doc_url: "https://developers.hubspot.com/docs/api/private-apps",
   },
   {

@@ -184,3 +184,10 @@ verify_jwt = false
 
 [functions.whatsapp-incoming-webhook]
 verify_jwt = false
+
+# Sprint 30 — HubSpot OAuth
+[functions.hubspot-oauth-exchange]
+verify_jwt = true
+
+[functions.hubspot-oauth-refresh-tokens]
+verify_jwt = false

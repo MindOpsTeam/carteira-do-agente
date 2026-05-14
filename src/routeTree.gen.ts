@@ -29,12 +29,14 @@ import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authen
 import { Route as AuthenticatedIntegrationsSupabaseRouteImport } from './routes/_authenticated/integrations.supabase'
 import { Route as AuthenticatedIntegrationsNuvemshopRouteImport } from './routes/_authenticated/integrations.nuvemshop'
 import { Route as AuthenticatedIntegrationsMercadoLivreRouteImport } from './routes/_authenticated/integrations.mercado-livre'
+import { Route as AuthenticatedIntegrationsHubspotRouteImport } from './routes/_authenticated/integrations.hubspot'
 import { Route as AuthenticatedIntegrationsContaazulRouteImport } from './routes/_authenticated/integrations.contaazul'
 import { Route as AuthenticatedIntegrationsBlingRouteImport } from './routes/_authenticated/integrations.bling'
 import { Route as AuthenticatedInstancesIdRouteImport } from './routes/_authenticated/instances.$id'
 import { Route as AuthenticatedAutomationsIdRouteImport } from './routes/_authenticated/automations.$id'
 import { Route as AuthenticatedIntegrationsNuvemshopCallbackRouteImport } from './routes/_authenticated/integrations.nuvemshop.callback'
 import { Route as AuthenticatedIntegrationsMercadoLivreCallbackRouteImport } from './routes/_authenticated/integrations.mercado-livre.callback'
+import { Route as AuthenticatedIntegrationsHubspotCallbackRouteImport } from './routes/_authenticated/integrations.hubspot.callback'
 import { Route as AuthenticatedIntegrationsContaazulCallbackRouteImport } from './routes/_authenticated/integrations.contaazul.callback'
 import { Route as AuthenticatedIntegrationsBlingCallbackRouteImport } from './routes/_authenticated/integrations.bling.callback'
 
@@ -145,6 +147,12 @@ const AuthenticatedIntegrationsMercadoLivreRoute =
     path: '/integrations/mercado-livre',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedIntegrationsHubspotRoute =
+  AuthenticatedIntegrationsHubspotRouteImport.update({
+    id: '/integrations/hubspot',
+    path: '/integrations/hubspot',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIntegrationsContaazulRoute =
   AuthenticatedIntegrationsContaazulRouteImport.update({
     id: '/integrations/contaazul',
@@ -181,6 +189,12 @@ const AuthenticatedIntegrationsMercadoLivreCallbackRoute =
     path: '/callback',
     getParentRoute: () => AuthenticatedIntegrationsMercadoLivreRoute,
   } as any)
+const AuthenticatedIntegrationsHubspotCallbackRoute =
+  AuthenticatedIntegrationsHubspotCallbackRouteImport.update({
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => AuthenticatedIntegrationsHubspotRoute,
+  } as any)
 const AuthenticatedIntegrationsContaazulCallbackRoute =
   AuthenticatedIntegrationsContaazulCallbackRouteImport.update({
     id: '/callback',
@@ -210,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
+  '/integrations/hubspot': typeof AuthenticatedIntegrationsHubspotRouteWithChildren
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
@@ -220,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
   '/integrations/contaazul/callback': typeof AuthenticatedIntegrationsContaazulCallbackRoute
+  '/integrations/hubspot/callback': typeof AuthenticatedIntegrationsHubspotCallbackRoute
   '/integrations/mercado-livre/callback': typeof AuthenticatedIntegrationsMercadoLivreCallbackRoute
   '/integrations/nuvemshop/callback': typeof AuthenticatedIntegrationsNuvemshopCallbackRoute
 }
@@ -239,6 +255,7 @@ export interface FileRoutesByTo {
   '/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
+  '/integrations/hubspot': typeof AuthenticatedIntegrationsHubspotRouteWithChildren
   '/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
@@ -249,6 +266,7 @@ export interface FileRoutesByTo {
   '/integrations': typeof AuthenticatedIntegrationsIndexRoute
   '/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
   '/integrations/contaazul/callback': typeof AuthenticatedIntegrationsContaazulCallbackRoute
+  '/integrations/hubspot/callback': typeof AuthenticatedIntegrationsHubspotCallbackRoute
   '/integrations/mercado-livre/callback': typeof AuthenticatedIntegrationsMercadoLivreCallbackRoute
   '/integrations/nuvemshop/callback': typeof AuthenticatedIntegrationsNuvemshopCallbackRoute
 }
@@ -270,6 +288,7 @@ export interface FileRoutesById {
   '/_authenticated/instances/$id': typeof AuthenticatedInstancesIdRoute
   '/_authenticated/integrations/bling': typeof AuthenticatedIntegrationsBlingRouteWithChildren
   '/_authenticated/integrations/contaazul': typeof AuthenticatedIntegrationsContaazulRouteWithChildren
+  '/_authenticated/integrations/hubspot': typeof AuthenticatedIntegrationsHubspotRouteWithChildren
   '/_authenticated/integrations/mercado-livre': typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   '/_authenticated/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/_authenticated/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
@@ -280,6 +299,7 @@ export interface FileRoutesById {
   '/_authenticated/integrations/': typeof AuthenticatedIntegrationsIndexRoute
   '/_authenticated/integrations/bling/callback': typeof AuthenticatedIntegrationsBlingCallbackRoute
   '/_authenticated/integrations/contaazul/callback': typeof AuthenticatedIntegrationsContaazulCallbackRoute
+  '/_authenticated/integrations/hubspot/callback': typeof AuthenticatedIntegrationsHubspotCallbackRoute
   '/_authenticated/integrations/mercado-livre/callback': typeof AuthenticatedIntegrationsMercadoLivreCallbackRoute
   '/_authenticated/integrations/nuvemshop/callback': typeof AuthenticatedIntegrationsNuvemshopCallbackRoute
 }
@@ -301,6 +321,7 @@ export interface FileRouteTypes {
     | '/instances/$id'
     | '/integrations/bling'
     | '/integrations/contaazul'
+    | '/integrations/hubspot'
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
     | '/integrations/supabase'
@@ -311,6 +332,7 @@ export interface FileRouteTypes {
     | '/integrations/'
     | '/integrations/bling/callback'
     | '/integrations/contaazul/callback'
+    | '/integrations/hubspot/callback'
     | '/integrations/mercado-livre/callback'
     | '/integrations/nuvemshop/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -330,6 +352,7 @@ export interface FileRouteTypes {
     | '/instances/$id'
     | '/integrations/bling'
     | '/integrations/contaazul'
+    | '/integrations/hubspot'
     | '/integrations/mercado-livre'
     | '/integrations/nuvemshop'
     | '/integrations/supabase'
@@ -340,6 +363,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/integrations/bling/callback'
     | '/integrations/contaazul/callback'
+    | '/integrations/hubspot/callback'
     | '/integrations/mercado-livre/callback'
     | '/integrations/nuvemshop/callback'
   id:
@@ -360,6 +384,7 @@ export interface FileRouteTypes {
     | '/_authenticated/instances/$id'
     | '/_authenticated/integrations/bling'
     | '/_authenticated/integrations/contaazul'
+    | '/_authenticated/integrations/hubspot'
     | '/_authenticated/integrations/mercado-livre'
     | '/_authenticated/integrations/nuvemshop'
     | '/_authenticated/integrations/supabase'
@@ -370,6 +395,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integrations/'
     | '/_authenticated/integrations/bling/callback'
     | '/_authenticated/integrations/contaazul/callback'
+    | '/_authenticated/integrations/hubspot/callback'
     | '/_authenticated/integrations/mercado-livre/callback'
     | '/_authenticated/integrations/nuvemshop/callback'
   fileRoutesById: FileRoutesById
@@ -523,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegrationsMercadoLivreRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/integrations/hubspot': {
+      id: '/_authenticated/integrations/hubspot'
+      path: '/integrations/hubspot'
+      fullPath: '/integrations/hubspot'
+      preLoaderRoute: typeof AuthenticatedIntegrationsHubspotRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/integrations/contaazul': {
       id: '/_authenticated/integrations/contaazul'
       path: '/integrations/contaazul'
@@ -564,6 +597,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/integrations/mercado-livre/callback'
       preLoaderRoute: typeof AuthenticatedIntegrationsMercadoLivreCallbackRouteImport
       parentRoute: typeof AuthenticatedIntegrationsMercadoLivreRoute
+    }
+    '/_authenticated/integrations/hubspot/callback': {
+      id: '/_authenticated/integrations/hubspot/callback'
+      path: '/callback'
+      fullPath: '/integrations/hubspot/callback'
+      preLoaderRoute: typeof AuthenticatedIntegrationsHubspotCallbackRouteImport
+      parentRoute: typeof AuthenticatedIntegrationsHubspotRoute
     }
     '/_authenticated/integrations/contaazul/callback': {
       id: '/_authenticated/integrations/contaazul/callback'
@@ -612,6 +652,21 @@ const AuthenticatedIntegrationsContaazulRouteWithChildren =
     AuthenticatedIntegrationsContaazulRouteChildren,
   )
 
+interface AuthenticatedIntegrationsHubspotRouteChildren {
+  AuthenticatedIntegrationsHubspotCallbackRoute: typeof AuthenticatedIntegrationsHubspotCallbackRoute
+}
+
+const AuthenticatedIntegrationsHubspotRouteChildren: AuthenticatedIntegrationsHubspotRouteChildren =
+  {
+    AuthenticatedIntegrationsHubspotCallbackRoute:
+      AuthenticatedIntegrationsHubspotCallbackRoute,
+  }
+
+const AuthenticatedIntegrationsHubspotRouteWithChildren =
+  AuthenticatedIntegrationsHubspotRoute._addFileChildren(
+    AuthenticatedIntegrationsHubspotRouteChildren,
+  )
+
 interface AuthenticatedIntegrationsMercadoLivreRouteChildren {
   AuthenticatedIntegrationsMercadoLivreCallbackRoute: typeof AuthenticatedIntegrationsMercadoLivreCallbackRoute
 }
@@ -655,6 +710,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInstancesIdRoute: typeof AuthenticatedInstancesIdRoute
   AuthenticatedIntegrationsBlingRoute: typeof AuthenticatedIntegrationsBlingRouteWithChildren
   AuthenticatedIntegrationsContaazulRoute: typeof AuthenticatedIntegrationsContaazulRouteWithChildren
+  AuthenticatedIntegrationsHubspotRoute: typeof AuthenticatedIntegrationsHubspotRouteWithChildren
   AuthenticatedIntegrationsMercadoLivreRoute: typeof AuthenticatedIntegrationsMercadoLivreRouteWithChildren
   AuthenticatedIntegrationsNuvemshopRoute: typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   AuthenticatedIntegrationsSupabaseRoute: typeof AuthenticatedIntegrationsSupabaseRoute
@@ -680,6 +736,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedIntegrationsBlingRouteWithChildren,
   AuthenticatedIntegrationsContaazulRoute:
     AuthenticatedIntegrationsContaazulRouteWithChildren,
+  AuthenticatedIntegrationsHubspotRoute:
+    AuthenticatedIntegrationsHubspotRouteWithChildren,
   AuthenticatedIntegrationsMercadoLivreRoute:
     AuthenticatedIntegrationsMercadoLivreRouteWithChildren,
   AuthenticatedIntegrationsNuvemshopRoute:
