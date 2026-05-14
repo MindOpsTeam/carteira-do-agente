@@ -9,6 +9,8 @@ import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { getToolMeta } from "@/lib/tool-meta";
+import { beginChatStream, endChatStream } from "@/lib/chat-activity";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({ meta: [{ title: "Conversar com Marcos — Agente CFO" }] }),
@@ -100,12 +102,14 @@ function ChatPage() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [conn, setConn] = useState<ConnState>("idle");
   const [streaming, setStreaming] = useState(false);
+  // tool calls per assistant-message id (for inline pills)
+  type ToolPill = { id: string; name: string; startedAt: number; finishedAt?: number };
+  const [toolPills, setToolPills] = useState<Record<string | number, ToolPill[]>>({});
 
   const sseFailuresRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
-  
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -189,10 +193,19 @@ function ChatPage() {
   const sendViaSse = useCallback(
     async (content: string): Promise<boolean> => {
       if (!threadId) return false;
-      const { data: sess } = await supabase.auth.getSession();
-      const accessToken = sess.session?.access_token;
+
+      // Proactive refresh — long streams (~60s+) can outlive a token that
+      // was minutes away from expiring. Refresh BEFORE we open the stream
+      // so the bearer token is fresh for the whole duration.
+      try {
+        await supabase.auth.refreshSession();
+      } catch {
+        // ignore — we'll fall through and surface the 401 below
+      }
+      let { data: sess } = await supabase.auth.getSession();
+      let accessToken = sess.session?.access_token;
       if (!accessToken) {
-        toast.error("Sem sessão");
+        toast.error("Sessão expirada — faça login de novo");
         return false;
       }
 
@@ -235,11 +248,19 @@ function ChatPage() {
       ];
 
       setStreaming(true);
+      beginChatStream();
       let buffer = "";
       let lastFlush = Date.now();
       let lastChunk = Date.now();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+
+      // tool-call accumulator: index → { id, name, startedAt }
+      const toolsByIdx = new Map<number, ToolPill>();
+      const flushPills = () => {
+        const list = Array.from(toolsByIdx.values());
+        setToolPills((prev) => ({ ...prev, [asstId]: list }));
+      };
 
       // timeout watcher
       const timeoutTimer = window.setInterval(() => {
@@ -274,13 +295,13 @@ function ChatPage() {
         lastFlush = Date.now();
       };
 
-      try {
+      const doFetch = async (token: string) => {
         const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
         const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-        const res = await fetch(`${supaUrl}/functions/v1/chat-stream`, {
+        return fetch(`${supaUrl}/functions/v1/chat-stream`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${token}`,
             apikey,
             "Content-Type": "application/json",
             Accept: "text/event-stream",
@@ -291,9 +312,28 @@ function ChatPage() {
           }),
           signal: ctrl.signal,
         });
+      };
 
+      try {
+        let res = await doFetch(accessToken);
+
+        // 401 mid-flight: try a fresh refresh once. Never auto-logout.
         if (res.status === 401) {
-          throw new Error("Sessão expirada — recarregue a página");
+          try {
+            await supabase.auth.refreshSession();
+          } catch {
+            // fall through
+          }
+          const retry = await supabase.auth.getSession();
+          accessToken = retry.data.session?.access_token ?? "";
+          if (accessToken) {
+            res = await doFetch(accessToken);
+          }
+          if (res.status === 401) {
+            throw new Error(
+              "Sua sessão expirou — clique em Sair no canto superior e entre de novo",
+            );
+          }
         }
         if (res.status === 503) {
           const t = await res.text().catch(() => "");
@@ -324,22 +364,63 @@ function ChatPage() {
             if (!trimmed.startsWith("data:")) continue;
             const payload = trimmed.slice(5).trim();
             if (payload === "[DONE]") {
+              // mark any still-open tool as finished
+              const now = Date.now();
+              toolsByIdx.forEach((p) => {
+                if (!p.finishedAt) p.finishedAt = now;
+              });
+              flushPills();
               await flushToDb(true);
               window.clearInterval(timeoutTimer);
               setStreaming(false);
+              endChatStream();
               abortRef.current = null;
               sseFailuresRef.current = 0;
               return true;
             }
             try {
               const json = JSON.parse(payload);
-              const delta = json.choices?.[0]?.delta?.content ?? "";
-              if (delta) {
-                buffer += delta;
+              const delta = json.choices?.[0]?.delta;
+              const textDelta: string = delta?.content ?? "";
+              if (textDelta) {
+                // first content chunk after a tool means the tool finished
+                const now = Date.now();
+                let pillsChanged = false;
+                toolsByIdx.forEach((p) => {
+                  if (!p.finishedAt) {
+                    p.finishedAt = now;
+                    pillsChanged = true;
+                  }
+                });
+                if (pillsChanged) flushPills();
+                buffer += textDelta;
                 lastChunk = Date.now();
                 if (Date.now() - lastFlush > STREAM_FLUSH_MS) {
                   await flushToDb(false);
                 }
+              }
+              // tool_calls deltas (OpenAI streaming format: array w/ index)
+              const toolDeltas = delta?.tool_calls;
+              if (Array.isArray(toolDeltas)) {
+                let pillsChanged = false;
+                for (const td of toolDeltas) {
+                  const idx = typeof td.index === "number" ? td.index : 0;
+                  const existing = toolsByIdx.get(idx);
+                  const fnName = td.function?.name;
+                  if (!existing) {
+                    toolsByIdx.set(idx, {
+                      id: td.id ?? `tool-${idx}`,
+                      name: fnName ?? "",
+                      startedAt: Date.now(),
+                    });
+                    pillsChanged = true;
+                  } else if (fnName && !existing.name) {
+                    existing.name = fnName;
+                    pillsChanged = true;
+                  }
+                }
+                lastChunk = Date.now();
+                if (pillsChanged) flushPills();
               }
             } catch {
               // ignore non-JSON keepalives
@@ -347,15 +428,22 @@ function ChatPage() {
           }
         }
         // stream ended without [DONE]
+        const now = Date.now();
+        toolsByIdx.forEach((p) => {
+          if (!p.finishedAt) p.finishedAt = now;
+        });
+        flushPills();
         await flushToDb(true);
         window.clearInterval(timeoutTimer);
         setStreaming(false);
+        endChatStream();
         abortRef.current = null;
         sseFailuresRef.current = 0;
         return true;
       } catch (err) {
         window.clearInterval(timeoutTimer);
         setStreaming(false);
+        endChatStream();
         abortRef.current = null;
         const aborted = (err as Error)?.name === "AbortError";
         const errMsg = aborted ? "Cancelado pelo usuário" : (err as Error)?.message ?? String(err);
@@ -512,6 +600,7 @@ function ChatPage() {
             messages.map((m) => {
               const isUser = m.role === "user";
               const isStreaming = m.status === "streaming";
+              const pills = !isUser ? toolPills[m.id] ?? [] : [];
               return (
                 <div
                   key={m.id}
@@ -526,6 +615,34 @@ function ChatPage() {
                         : "bg-muted text-foreground"
                     } ${m.status === "error" ? "border border-destructive/50" : ""}`}
                   >
+                    {pills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {pills.map((p) => {
+                          const meta = getToolMeta(p.name || "");
+                          const done = !!p.finishedAt;
+                          const ms = done ? (p.finishedAt! - p.startedAt) : 0;
+                          return (
+                            <span
+                              key={p.id}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border ${
+                                done
+                                  ? "bg-background/60 border-border text-muted-foreground"
+                                  : "bg-background/80 border-primary/30 text-foreground animate-pulse"
+                              }`}
+                              title={p.name}
+                            >
+                              <span>{meta.icon}</span>
+                              <span className="font-medium">{meta.label}</span>
+                              {done ? (
+                                <span className="opacity-70">· {ms}ms ✓</span>
+                              ) : (
+                                <span className="opacity-70">· consultando…</span>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                     {isUser ? (
                       <div>{m.content}</div>
                     ) : m.content ? (

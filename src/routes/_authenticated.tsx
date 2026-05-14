@@ -4,11 +4,15 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { Toaster } from "@/components/ui/sonner";
+import { hasActiveChatStream } from "@/lib/chat-activity";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
+      // Don't kick the user mid-stream — token may just be refreshing.
+      // The chat layer surfaces an explicit "session expired" toast instead.
+      if (hasActiveChatStream()) return;
       throw redirect({ to: "/login" });
     }
   },
