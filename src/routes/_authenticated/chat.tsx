@@ -113,7 +113,9 @@ function ChatPage() {
   const [messages, setMessages] = useState<ChatRow[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [channels, setChannels] = useState<ChannelOption[]>([]);
+  const [activeChannelId, setActiveChannelId] = useState<string>("panel");
   const [conn, setConn] = useState<ConnState>("idle");
   const [streaming, setStreaming] = useState(false);
   // tool calls per assistant-message id (for inline pills)
@@ -124,6 +126,10 @@ function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
+
+  const activeChannel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
+  const threadId = activeChannel?.threadId ?? null;
+  const isPanelChannel = activeChannel?.kind === "panel";
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -143,21 +149,65 @@ function ChatPage() {
   };
 
   // -------------------------------------------------------------------------
-  // Boot: user, history, realtime
+  // Boot: discover user + available channels
   // -------------------------------------------------------------------------
   useEffect(() => {
     let mounted = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user || !mounted) return;
-      const tid = `panel:${u.user.id}`;
-      setThreadId(tid);
+      setUserId(u.user.id);
 
+      const baseChannels: ChannelOption[] = [
+        {
+          id: "panel",
+          label: "Painel web",
+          threadId: `panel:${u.user.id}`,
+          kind: "panel",
+        },
+      ];
+
+      // discover connected WhatsApp instances flagged to receive Marcos chat
+      const { data: waList } = await supabase
+        .from("whatsapp_instances")
+        .select("instance_name, display_name, phone_number, status, receives_marcos_chat")
+        .eq("status", "connected")
+        .eq("receives_marcos_chat", true);
+
+      for (const w of waList ?? []) {
+        if (!w.phone_number) continue;
+        baseChannels.push({
+          id: `wa:${w.instance_name}`,
+          label: `WhatsApp · ${w.display_name ?? w.instance_name}`,
+          threadId: `wa:${w.instance_name}:${w.phone_number}`,
+          kind: "whatsapp",
+          phone: w.phone_number,
+        });
+      }
+      if (!mounted) return;
+      setChannels(baseChannels);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Load history + realtime per active thread
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!threadId) return;
+    let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    setLoading(true);
+    knownIdsRef.current.clear();
+    setMessages([]);
+
+    (async () => {
       const { data: msgs } = await supabase
         .from("chat_messages")
         .select("*")
-        .eq("thread_id", tid)
+        .eq("thread_id", threadId)
         .order("created_at", { ascending: false })
         .limit(HISTORY_LIMIT);
       if (!mounted) return;
@@ -166,16 +216,15 @@ function ChatPage() {
       setMessages(ordered);
       setLoading(false);
 
-      // realtime — INSERT only (avoids streaming UPDATE echo loops)
       channel = supabase
-        .channel(`chat-${tid}`)
+        .channel(`chat-${threadId}`)
         .on(
           "postgres_changes",
           {
             event: "INSERT",
             schema: "public",
             table: "chat_messages",
-            filter: `thread_id=eq.${tid}`,
+            filter: `thread_id=eq.${threadId}`,
           },
           (p) => {
             const row = p.new as ChatRow;
@@ -190,7 +239,7 @@ function ChatPage() {
       mounted = false;
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [threadId]);
 
   // -------------------------------------------------------------------------
   // Connection: SSE goes through edge function chat-stream (CORS proxy).
