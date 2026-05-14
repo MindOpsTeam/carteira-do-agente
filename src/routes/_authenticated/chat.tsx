@@ -193,10 +193,19 @@ function ChatPage() {
   const sendViaSse = useCallback(
     async (content: string): Promise<boolean> => {
       if (!threadId) return false;
-      const { data: sess } = await supabase.auth.getSession();
-      const accessToken = sess.session?.access_token;
+
+      // Proactive refresh — long streams (~60s+) can outlive a token that
+      // was minutes away from expiring. Refresh BEFORE we open the stream
+      // so the bearer token is fresh for the whole duration.
+      try {
+        await supabase.auth.refreshSession();
+      } catch {
+        // ignore — we'll fall through and surface the 401 below
+      }
+      let { data: sess } = await supabase.auth.getSession();
+      let accessToken = sess.session?.access_token;
       if (!accessToken) {
-        toast.error("Sem sessão");
+        toast.error("Sessão expirada — faça login de novo");
         return false;
       }
 
@@ -239,11 +248,19 @@ function ChatPage() {
       ];
 
       setStreaming(true);
+      beginChatStream();
       let buffer = "";
       let lastFlush = Date.now();
       let lastChunk = Date.now();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+
+      // tool-call accumulator: index → { id, name, startedAt }
+      const toolsByIdx = new Map<number, ToolPill>();
+      const flushPills = () => {
+        const list = Array.from(toolsByIdx.values());
+        setToolPills((prev) => ({ ...prev, [asstId]: list }));
+      };
 
       // timeout watcher
       const timeoutTimer = window.setInterval(() => {
@@ -278,13 +295,13 @@ function ChatPage() {
         lastFlush = Date.now();
       };
 
-      try {
+      const doFetch = async (token: string) => {
         const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
         const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-        const res = await fetch(`${supaUrl}/functions/v1/chat-stream`, {
+        return fetch(`${supaUrl}/functions/v1/chat-stream`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${token}`,
             apikey,
             "Content-Type": "application/json",
             Accept: "text/event-stream",
@@ -295,9 +312,28 @@ function ChatPage() {
           }),
           signal: ctrl.signal,
         });
+      };
 
+      try {
+        let res = await doFetch(accessToken);
+
+        // 401 mid-flight: try a fresh refresh once. Never auto-logout.
         if (res.status === 401) {
-          throw new Error("Sessão expirada — recarregue a página");
+          try {
+            await supabase.auth.refreshSession();
+          } catch {
+            // fall through
+          }
+          const retry = await supabase.auth.getSession();
+          accessToken = retry.data.session?.access_token ?? "";
+          if (accessToken) {
+            res = await doFetch(accessToken);
+          }
+          if (res.status === 401) {
+            throw new Error(
+              "Sua sessão expirou — clique em Sair no canto superior e entre de novo",
+            );
+          }
         }
         if (res.status === 503) {
           const t = await res.text().catch(() => "");
@@ -328,22 +364,63 @@ function ChatPage() {
             if (!trimmed.startsWith("data:")) continue;
             const payload = trimmed.slice(5).trim();
             if (payload === "[DONE]") {
+              // mark any still-open tool as finished
+              const now = Date.now();
+              toolsByIdx.forEach((p) => {
+                if (!p.finishedAt) p.finishedAt = now;
+              });
+              flushPills();
               await flushToDb(true);
               window.clearInterval(timeoutTimer);
               setStreaming(false);
+              endChatStream();
               abortRef.current = null;
               sseFailuresRef.current = 0;
               return true;
             }
             try {
               const json = JSON.parse(payload);
-              const delta = json.choices?.[0]?.delta?.content ?? "";
-              if (delta) {
-                buffer += delta;
+              const delta = json.choices?.[0]?.delta;
+              const textDelta: string = delta?.content ?? "";
+              if (textDelta) {
+                // first content chunk after a tool means the tool finished
+                const now = Date.now();
+                let pillsChanged = false;
+                toolsByIdx.forEach((p) => {
+                  if (!p.finishedAt) {
+                    p.finishedAt = now;
+                    pillsChanged = true;
+                  }
+                });
+                if (pillsChanged) flushPills();
+                buffer += textDelta;
                 lastChunk = Date.now();
                 if (Date.now() - lastFlush > STREAM_FLUSH_MS) {
                   await flushToDb(false);
                 }
+              }
+              // tool_calls deltas (OpenAI streaming format: array w/ index)
+              const toolDeltas = delta?.tool_calls;
+              if (Array.isArray(toolDeltas)) {
+                let pillsChanged = false;
+                for (const td of toolDeltas) {
+                  const idx = typeof td.index === "number" ? td.index : 0;
+                  const existing = toolsByIdx.get(idx);
+                  const fnName = td.function?.name;
+                  if (!existing) {
+                    toolsByIdx.set(idx, {
+                      id: td.id ?? `tool-${idx}`,
+                      name: fnName ?? "",
+                      startedAt: Date.now(),
+                    });
+                    pillsChanged = true;
+                  } else if (fnName && !existing.name) {
+                    existing.name = fnName;
+                    pillsChanged = true;
+                  }
+                }
+                lastChunk = Date.now();
+                if (pillsChanged) flushPills();
               }
             } catch {
               // ignore non-JSON keepalives
@@ -351,15 +428,22 @@ function ChatPage() {
           }
         }
         // stream ended without [DONE]
+        const now = Date.now();
+        toolsByIdx.forEach((p) => {
+          if (!p.finishedAt) p.finishedAt = now;
+        });
+        flushPills();
         await flushToDb(true);
         window.clearInterval(timeoutTimer);
         setStreaming(false);
+        endChatStream();
         abortRef.current = null;
         sseFailuresRef.current = 0;
         return true;
       } catch (err) {
         window.clearInterval(timeoutTimer);
         setStreaming(false);
+        endChatStream();
         abortRef.current = null;
         const aborted = (err as Error)?.name === "AbortError";
         const errMsg = aborted ? "Cancelado pelo usuário" : (err as Error)?.message ?? String(err);
