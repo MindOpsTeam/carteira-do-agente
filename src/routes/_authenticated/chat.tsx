@@ -189,10 +189,10 @@ function ChatPage() {
   const sendViaSse = useCallback(
     async (content: string): Promise<boolean> => {
       if (!threadId) return false;
-      let gateway: { http_url: string; gateway_token: string };
-      try {
-        gateway = await fetchGateway();
-      } catch {
+      const { data: sess } = await supabase.auth.getSession();
+      const accessToken = sess.session?.access_token;
+      if (!accessToken) {
+        toast.error("Sem sessão");
         return false;
       }
 
