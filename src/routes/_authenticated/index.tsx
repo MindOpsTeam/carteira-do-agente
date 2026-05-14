@@ -140,6 +140,31 @@ function ComandoCentral() {
     retry: (count, err) => (err as { status?: number })?.status === 401 ? false : count < 1,
   });
 
+  // Detect real integrations (independent of dashboard-snapshot's instance-based view)
+  const { data: hasIntegrations } = useQuery({
+    queryKey: ["has-integrations"],
+    queryFn: async () => {
+      const [creds, projs] = await Promise.all([
+        supabase.from("integration_credentials").select("skill_name").eq("active", true),
+        supabase.from("supabase_projects").select("id").eq("active", true),
+      ]);
+      return ((creds.data?.length ?? 0) + (projs.data?.length ?? 0)) > 0;
+    },
+    staleTime: 60 * 1000,
+  });
+
+  // Dismissable "no integrations" banner (until midnight)
+  const [noIntegDismissed, setNoIntegDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const v = localStorage.getItem("cfo:dismiss-no-integrations");
+    if (!v) return false;
+    return new Date(v).toDateString() === new Date().toDateString();
+  });
+  const dismissNoInteg = () => {
+    localStorage.setItem("cfo:dismiss-no-integrations", new Date().toISOString());
+    setNoIntegDismissed(true);
+  };
+
   // Onboarding check
   useEffect(() => {
     (async () => {
