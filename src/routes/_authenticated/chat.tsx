@@ -102,12 +102,14 @@ function ChatPage() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [conn, setConn] = useState<ConnState>("idle");
   const [streaming, setStreaming] = useState(false);
+  // tool calls per assistant-message id (for inline pills)
+  type ToolPill = { id: string; name: string; startedAt: number; finishedAt?: number };
+  const [toolPills, setToolPills] = useState<Record<string | number, ToolPill[]>>({});
 
   const sseFailuresRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
-  
 
   // -------------------------------------------------------------------------
   // Helpers
