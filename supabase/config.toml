@@ -195,3 +195,7 @@ verify_jwt = false
 # Sprint 31 — OpenClaw WebSocket gateway URL
 [functions.openclaw-ws-url]
 verify_jwt = true
+
+# Sprint 31 — Chat SSE proxy (browser → edge → tunnel)
+[functions.chat-stream]
+verify_jwt = true

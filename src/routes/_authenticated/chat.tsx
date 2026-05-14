@@ -105,7 +105,7 @@ function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
-  const gatewayCacheRef = useRef<{ http_url: string; gateway_token: string } | null>(null);
+  
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -175,42 +175,13 @@ function ChatPage() {
   }, []);
 
   // -------------------------------------------------------------------------
-  // Connection check (heartbeat freshness via openclaw-ws-url)
+  // Connection: SSE goes through edge function chat-stream (CORS proxy).
+  // No gateway URL/token in the browser anymore.
   // -------------------------------------------------------------------------
-  const fetchGateway = useCallback(async (force = false) => {
-    if (!force && gatewayCacheRef.current) return gatewayCacheRef.current;
-    setConn("checking");
-    const { data: sess } = await supabase.auth.getSession();
-    const token = sess.session?.access_token;
-    if (!token) {
-      setConn("offline");
-      throw new Error("Sem sessão");
-    }
-    const { data, error } = await supabase.functions.invoke("openclaw-ws-url", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (error) {
-      setConn("offline");
-      throw error;
-    }
-    const { ws_url, gateway_token } = data as { ws_url: string; gateway_token: string };
-    const http_url = ws_url
-      .replace(/^wss:\/\//, "https://")
-      .replace(/^ws:\/\//, "http://")
-      .replace(/\/$/, "");
-    const cached = { http_url, gateway_token };
-    gatewayCacheRef.current = cached;
-    setConn("online");
-    return cached;
-  }, []);
-
   useEffect(() => {
     if (!threadId) return;
-    fetchGateway().catch(() => {
-      // toast handled per-action; avoid noise on boot
-    });
-  }, [threadId, fetchGateway]);
+    setConn("online");
+  }, [threadId]);
 
   // -------------------------------------------------------------------------
   // SSE streaming send
@@ -218,10 +189,10 @@ function ChatPage() {
   const sendViaSse = useCallback(
     async (content: string): Promise<boolean> => {
       if (!threadId) return false;
-      let gateway: { http_url: string; gateway_token: string };
-      try {
-        gateway = await fetchGateway();
-      } catch {
+      const { data: sess } = await supabase.auth.getSession();
+      const accessToken = sess.session?.access_token;
+      if (!accessToken) {
+        toast.error("Sem sessão");
         return false;
       }
 
@@ -304,29 +275,34 @@ function ChatPage() {
       };
 
       try {
-        const res = await fetch(`${gateway.http_url}/v1/chat/completions`, {
+        const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
+        const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+        const res = await fetch(`${supaUrl}/functions/v1/chat-stream`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${gateway.gateway_token}`,
+            Authorization: `Bearer ${accessToken}`,
+            apikey,
             "Content-Type": "application/json",
             Accept: "text/event-stream",
           },
           body: JSON.stringify({
-            model: "openclaw",
             messages: payloadMessages,
-            stream: true,
             max_tokens: 2048,
           }),
           signal: ctrl.signal,
         });
 
         if (res.status === 401) {
-          gatewayCacheRef.current = null;
-          throw new Error("Token expirado, reconecte");
+          throw new Error("Sessão expirada — recarregue a página");
+        }
+        if (res.status === 503) {
+          const t = await res.text().catch(() => "");
+          throw new Error(t || "Marcos offline");
         }
         if (res.status === 404) {
           throw new Error("Modo streaming desabilitado na VPS. Pedir admin ativar.");
         }
+
         if (!res.ok || !res.body) {
           throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => "")}`);
         }
@@ -391,7 +367,7 @@ function ChatPage() {
         return aborted ? true : false;
       }
     },
-    [threadId, messages, fetchGateway],
+    [threadId, messages],
   );
 
   // -------------------------------------------------------------------------
@@ -440,13 +416,8 @@ function ChatPage() {
 
   const reconnect = async () => {
     sseFailuresRef.current = 0;
-    gatewayCacheRef.current = null;
-    try {
-      await fetchGateway(true);
-      toast.success("Reconectado");
-    } catch (err) {
-      toast.error(`Falha: ${(err as Error)?.message ?? String(err)}`);
-    }
+    setConn("online");
+    toast.success("Pronto pra tentar de novo");
   };
 
   const clearHistory = async () => {
