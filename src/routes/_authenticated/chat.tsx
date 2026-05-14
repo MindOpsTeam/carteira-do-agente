@@ -416,13 +416,8 @@ function ChatPage() {
 
   const reconnect = async () => {
     sseFailuresRef.current = 0;
-    gatewayCacheRef.current = null;
-    try {
-      await fetchGateway(true);
-      toast.success("Reconectado");
-    } catch (err) {
-      toast.error(`Falha: ${(err as Error)?.message ?? String(err)}`);
-    }
+    setConn("online");
+    toast.success("Pronto pra tentar de novo");
   };
 
   const clearHistory = async () => {
