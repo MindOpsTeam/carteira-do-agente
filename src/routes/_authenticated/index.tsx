@@ -140,6 +140,31 @@ function ComandoCentral() {
     retry: (count, err) => (err as { status?: number })?.status === 401 ? false : count < 1,
   });
 
+  // Detect real integrations (independent of dashboard-snapshot's instance-based view)
+  const { data: hasIntegrations } = useQuery({
+    queryKey: ["has-integrations"],
+    queryFn: async () => {
+      const [creds, projs] = await Promise.all([
+        supabase.from("integration_credentials").select("skill_name").eq("active", true),
+        supabase.from("supabase_projects").select("id").eq("active", true),
+      ]);
+      return ((creds.data?.length ?? 0) + (projs.data?.length ?? 0)) > 0;
+    },
+    staleTime: 60 * 1000,
+  });
+
+  // Dismissable "no integrations" banner (until midnight)
+  const [noIntegDismissed, setNoIntegDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const v = localStorage.getItem("cfo:dismiss-no-integrations");
+    if (!v) return false;
+    return new Date(v).toDateString() === new Date().toDateString();
+  });
+  const dismissNoInteg = () => {
+    localStorage.setItem("cfo:dismiss-no-integrations", new Date().toISOString());
+    setNoIntegDismissed(true);
+  };
+
   // Onboarding check
   useEffect(() => {
     (async () => {
@@ -254,15 +279,12 @@ function ComandoCentral() {
     }
   };
 
-  // Edge: onboarding incomplete
-  if (needsOnboarding === "no-instance" || error?.status === 422) {
+  // Edge: onboarding incomplete (no instance registered yet)
+  if (needsOnboarding === "no-instance") {
     return <OnboardingCTA />;
   }
 
-  // Edge: no integrations
-  if (data && data.integrations_health.length === 0) {
-    return <NoIntegrationsCTA />;
-  }
+  const showNoIntegrationsBanner = hasIntegrations === false && !noIntegDismissed;
 
   const k = data?.kpis;
 
@@ -291,6 +313,20 @@ function ComandoCentral() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-destructive">Modo crise ativado — {criticalInsights.length} alerta(s) crítico(s)</p>
             <p className="text-xs text-muted-foreground">{criticalInsights[0]?.text}</p>
+          </div>
+        </div>
+      )}
+
+      {showNoIntegrationsBanner && (
+        <div className="border border-primary/40 bg-primary/5 rounded-md px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <Sparkles className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1 text-sm">
+            <p className="font-medium">Você ainda não conectou nenhuma integração.</p>
+            <p className="text-xs text-muted-foreground">KPIs ficarão zerados até conectar pelo menos uma.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => navigate({ to: "/integrations" })}>Ir para integrações →</Button>
+            <Button size="sm" variant="ghost" onClick={dismissNoInteg}>Fechar por hoje</Button>
           </div>
         </div>
       )}
