@@ -317,6 +317,20 @@ function ComandoCentral() {
         </div>
       )}
 
+      {showNoIntegrationsBanner && (
+        <div className="border border-primary/40 bg-primary/5 rounded-md px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <Sparkles className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1 text-sm">
+            <p className="font-medium">Você ainda não conectou nenhuma integração.</p>
+            <p className="text-xs text-muted-foreground">KPIs ficarão zerados até conectar pelo menos uma.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => navigate({ to: "/integrations" })}>Ir para integrações →</Button>
+            <Button size="sm" variant="ghost" onClick={dismissNoInteg}>Fechar por hoje</Button>
+          </div>
+        </div>
+      )}
+
       {/* HERO */}
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
