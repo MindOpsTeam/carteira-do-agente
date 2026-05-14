@@ -109,6 +109,8 @@ function IntegrationsIndex() {
   const [oauthConnected, setOauthConnected] = useState<Record<string, boolean>>({});
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [hasInstance, setHasInstance] = useState<boolean | null>(null);
+  const [waConnected, setWaConnected] = useState(0);
+  const [waReceivers, setWaReceivers] = useState(0);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<IntegrationCategory | "all">("all");
   const [editing, setEditing] = useState<IntegrationSpec | null>(null);
