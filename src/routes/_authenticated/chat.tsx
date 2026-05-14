@@ -600,6 +600,7 @@ function ChatPage() {
             messages.map((m) => {
               const isUser = m.role === "user";
               const isStreaming = m.status === "streaming";
+              const pills = !isUser ? toolPills[m.id] ?? [] : [];
               return (
                 <div
                   key={m.id}
@@ -614,6 +615,34 @@ function ChatPage() {
                         : "bg-muted text-foreground"
                     } ${m.status === "error" ? "border border-destructive/50" : ""}`}
                   >
+                    {pills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {pills.map((p) => {
+                          const meta = getToolMeta(p.name || "");
+                          const done = !!p.finishedAt;
+                          const ms = done ? (p.finishedAt! - p.startedAt) : 0;
+                          return (
+                            <span
+                              key={p.id}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border ${
+                                done
+                                  ? "bg-background/60 border-border text-muted-foreground"
+                                  : "bg-background/80 border-primary/30 text-foreground animate-pulse"
+                              }`}
+                              title={p.name}
+                            >
+                              <span>{meta.icon}</span>
+                              <span className="font-medium">{meta.label}</span>
+                              {done ? (
+                                <span className="opacity-70">· {ms}ms ✓</span>
+                              ) : (
+                                <span className="opacity-70">· consultando…</span>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                     {isUser ? (
                       <div>{m.content}</div>
                     ) : m.content ? (
