@@ -611,9 +611,10 @@ function ChatPage() {
     conn === "error" ? "erro de conexão" :
     "—";
 
-  const inputDisabled = streaming || conn === "offline";
-  const inputPlaceholder =
-    conn === "online" ? "Pergunte algo ao Marcos..." :
+  const inputDisabled = streaming || conn === "offline" || !isPanelChannel;
+  const inputPlaceholder = !isPanelChannel
+    ? `Leitura apenas — envie pelo WhatsApp ${activeChannel?.phone ?? ""}`
+    : conn === "online" ? "Pergunte algo ao Marcos..." :
     conn === "checking" ? "Conectando..." :
     conn === "offline" ? "Marcos está offline — verifique em /settings" :
     "Pergunte algo ao Marcos...";
@@ -637,6 +638,12 @@ function ChatPage() {
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className={`h-2 w-2 rounded-full ${connDot}`} />
               {connLabel}
+              {activeChannel && (
+                <>
+                  <span className="opacity-50">·</span>
+                  <span>Falando como: <strong className="text-foreground">{activeChannel.label}</strong></span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -647,12 +654,28 @@ function ChatPage() {
               Reconectar
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={clearHistory} disabled={messages.length === 0}>
+          <Button variant="ghost" size="sm" onClick={clearHistory} disabled={messages.length === 0 || !isPanelChannel}>
             <Trash2 className="h-4 w-4 mr-1" />
             Limpar
           </Button>
         </div>
       </div>
+
+      {/* Channel selector */}
+      {channels.length > 1 && (
+        <div className="pt-3">
+          <Tabs value={activeChannelId} onValueChange={setActiveChannelId}>
+            <TabsList className="h-9">
+              {channels.map((c) => (
+                <TabsTrigger key={c.id} value={c.id} className="text-xs gap-1.5">
+                  {c.kind === "whatsapp" ? <MessageCircle className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                  {c.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
 
       {/* Body */}
       <ScrollArea className="flex-1 my-3">
