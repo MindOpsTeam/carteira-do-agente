@@ -279,15 +279,12 @@ function ComandoCentral() {
     }
   };
 
-  // Edge: onboarding incomplete
-  if (needsOnboarding === "no-instance" || error?.status === 422) {
+  // Edge: onboarding incomplete (no instance registered yet)
+  if (needsOnboarding === "no-instance") {
     return <OnboardingCTA />;
   }
 
-  // Edge: no integrations
-  if (data && data.integrations_health.length === 0) {
-    return <NoIntegrationsCTA />;
-  }
+  const showNoIntegrationsBanner = hasIntegrations === false && !noIntegDismissed;
 
   const k = data?.kpis;
 
