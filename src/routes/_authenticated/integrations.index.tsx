@@ -27,7 +27,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Circle,
+  MessageCircle,
+  ChevronRight,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import {
   INTEGRATIONS_SPEC,
   CATEGORY_LABEL,
@@ -106,6 +109,8 @@ function IntegrationsIndex() {
   const [oauthConnected, setOauthConnected] = useState<Record<string, boolean>>({});
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [hasInstance, setHasInstance] = useState<boolean | null>(null);
+  const [waConnected, setWaConnected] = useState(0);
+  const [waReceivers, setWaReceivers] = useState(0);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<IntegrationCategory | "all">("all");
   const [editing, setEditing] = useState<IntegrationSpec | null>(null);
@@ -137,6 +142,14 @@ function IntegrationsIndex() {
       .eq("active", true)
       .limit(1);
     setSupabaseConnected((spList?.length ?? 0) > 0);
+
+    // 4. WhatsApp instances
+    const { data: waList } = await supabase
+      .from("whatsapp_instances")
+      .select("id, status, receives_marcos_chat");
+    const connected = (waList ?? []).filter((w) => w.status === "connected");
+    setWaConnected(connected.length);
+    setWaReceivers(connected.filter((w) => w.receives_marcos_chat).length);
   }
 
   useEffect(() => {
@@ -222,6 +235,36 @@ function IntegrationsIndex() {
             </TooltipContent>
           </Tooltip>
         </div>
+
+        {/* Channels (WhatsApp) status strip */}
+        <Card className="border-dashed">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10">
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="text-sm">
+                <div className="font-medium leading-tight">Canais WhatsApp</div>
+                <div className="text-xs text-muted-foreground">
+                  {waConnected === 0 ? (
+                    <>Nenhuma linha conectada — pareie a primeira em Configurações.</>
+                  ) : (
+                    <>
+                      {waConnected} {waConnected === 1 ? "linha conectada" : "linhas conectadas"} ·{" "}
+                      {waReceivers} recebendo chat do Marcos
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/settings/whatsapp">
+                Gerenciar
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative max-w-xs flex-1">

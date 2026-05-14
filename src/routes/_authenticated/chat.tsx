@@ -5,7 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide-react";
+import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff, MessageCircle } from "lucide-react";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,7 +31,16 @@ type ChatRow = {
   content: string;
   status: "pending" | "sent" | "delivered" | "error" | "streaming" | null;
   metadata: Record<string, unknown> | null;
+  channel: string | null;
   created_at: string;
+};
+
+type ChannelOption = {
+  id: string;            // unique key, ex "panel" or "wa:principal"
+  label: string;         // user-facing
+  threadId: string;      // panel:<uid>  or  wa:<instance_name>:<phone>
+  kind: "panel" | "whatsapp";
+  phone?: string | null;
 };
 
 type ConnState = "idle" | "checking" | "online" | "offline" | "error";
@@ -99,7 +113,9 @@ function ChatPage() {
   const [messages, setMessages] = useState<ChatRow[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [channels, setChannels] = useState<ChannelOption[]>([]);
+  const [activeChannelId, setActiveChannelId] = useState<string>("panel");
   const [conn, setConn] = useState<ConnState>("idle");
   const [streaming, setStreaming] = useState(false);
   // tool calls per assistant-message id (for inline pills)
@@ -110,6 +126,10 @@ function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
+
+  const activeChannel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
+  const threadId = activeChannel?.threadId ?? null;
+  const isPanelChannel = activeChannel?.kind === "panel";
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -129,21 +149,65 @@ function ChatPage() {
   };
 
   // -------------------------------------------------------------------------
-  // Boot: user, history, realtime
+  // Boot: discover user + available channels
   // -------------------------------------------------------------------------
   useEffect(() => {
     let mounted = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user || !mounted) return;
-      const tid = `panel:${u.user.id}`;
-      setThreadId(tid);
+      setUserId(u.user.id);
 
+      const baseChannels: ChannelOption[] = [
+        {
+          id: "panel",
+          label: "Painel web",
+          threadId: `panel:${u.user.id}`,
+          kind: "panel",
+        },
+      ];
+
+      // discover connected WhatsApp instances flagged to receive Marcos chat
+      const { data: waList } = await supabase
+        .from("whatsapp_instances")
+        .select("instance_name, display_name, phone_number, status, receives_marcos_chat")
+        .eq("status", "connected")
+        .eq("receives_marcos_chat", true);
+
+      for (const w of waList ?? []) {
+        if (!w.phone_number) continue;
+        baseChannels.push({
+          id: `wa:${w.instance_name}`,
+          label: `WhatsApp · ${w.display_name ?? w.instance_name}`,
+          threadId: `wa:${w.instance_name}:${w.phone_number}`,
+          kind: "whatsapp",
+          phone: w.phone_number,
+        });
+      }
+      if (!mounted) return;
+      setChannels(baseChannels);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Load history + realtime per active thread
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!threadId) return;
+    let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    setLoading(true);
+    knownIdsRef.current.clear();
+    setMessages([]);
+
+    (async () => {
       const { data: msgs } = await supabase
         .from("chat_messages")
         .select("*")
-        .eq("thread_id", tid)
+        .eq("thread_id", threadId)
         .order("created_at", { ascending: false })
         .limit(HISTORY_LIMIT);
       if (!mounted) return;
@@ -152,16 +216,15 @@ function ChatPage() {
       setMessages(ordered);
       setLoading(false);
 
-      // realtime — INSERT only (avoids streaming UPDATE echo loops)
       channel = supabase
-        .channel(`chat-${tid}`)
+        .channel(`chat-${threadId}`)
         .on(
           "postgres_changes",
           {
             event: "INSERT",
             schema: "public",
             table: "chat_messages",
-            filter: `thread_id=eq.${tid}`,
+            filter: `thread_id=eq.${threadId}`,
           },
           (p) => {
             const row = p.new as ChatRow;
@@ -176,7 +239,7 @@ function ChatPage() {
       mounted = false;
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [threadId]);
 
   // -------------------------------------------------------------------------
   // Connection: SSE goes through edge function chat-stream (CORS proxy).
@@ -485,6 +548,12 @@ function ChatPage() {
   const send = async () => {
     const content = input.trim();
     if (!content || streaming) return;
+    if (!isPanelChannel) {
+      toast.info("Para enviar nessa linha, use o WhatsApp do celular", {
+        description: "O painel só envia mensagens pelo canal Painel web.",
+      });
+      return;
+    }
     setInput("");
 
     if (sseFailuresRef.current >= MAX_SSE_FAILURES) {
@@ -542,9 +611,10 @@ function ChatPage() {
     conn === "error" ? "erro de conexão" :
     "—";
 
-  const inputDisabled = streaming || conn === "offline";
-  const inputPlaceholder =
-    conn === "online" ? "Pergunte algo ao Marcos..." :
+  const inputDisabled = streaming || conn === "offline" || !isPanelChannel;
+  const inputPlaceholder = !isPanelChannel
+    ? `Leitura apenas — envie pelo WhatsApp ${activeChannel?.phone ?? ""}`
+    : conn === "online" ? "Pergunte algo ao Marcos..." :
     conn === "checking" ? "Conectando..." :
     conn === "offline" ? "Marcos está offline — verifique em /settings" :
     "Pergunte algo ao Marcos...";
@@ -568,6 +638,12 @@ function ChatPage() {
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className={`h-2 w-2 rounded-full ${connDot}`} />
               {connLabel}
+              {activeChannel && (
+                <>
+                  <span className="opacity-50">·</span>
+                  <span>Falando como: <strong className="text-foreground">{activeChannel.label}</strong></span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -578,12 +654,28 @@ function ChatPage() {
               Reconectar
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={clearHistory} disabled={messages.length === 0}>
+          <Button variant="ghost" size="sm" onClick={clearHistory} disabled={messages.length === 0 || !isPanelChannel}>
             <Trash2 className="h-4 w-4 mr-1" />
             Limpar
           </Button>
         </div>
       </div>
+
+      {/* Channel selector */}
+      {channels.length > 1 && (
+        <div className="pt-3">
+          <Tabs value={activeChannelId} onValueChange={setActiveChannelId}>
+            <TabsList className="h-9">
+              {channels.map((c) => (
+                <TabsTrigger key={c.id} value={c.id} className="text-xs gap-1.5">
+                  {c.kind === "whatsapp" ? <MessageCircle className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                  {c.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
 
       {/* Body */}
       <ScrollArea className="flex-1 my-3">
@@ -662,6 +754,12 @@ function ChatPage() {
                     ) : null}
                     {m.status === "error" && !m.content && (
                       <div className="text-xs text-destructive">Falha ao receber resposta</div>
+                    )}
+                    {m.channel && m.channel !== "panel" && (
+                      <div className="mt-1 text-[10px] opacity-60 inline-flex items-center gap-1">
+                        <MessageCircle className="h-2.5 w-2.5" />
+                        via {m.channel.startsWith("whatsapp") ? "WhatsApp" : m.channel}
+                      </div>
                     )}
                   </div>
                 </div>
