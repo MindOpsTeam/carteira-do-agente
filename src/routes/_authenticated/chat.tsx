@@ -367,7 +367,7 @@ function ChatPage() {
         return aborted ? true : false;
       }
     },
-    [threadId, messages, fetchGateway],
+    [threadId, messages],
   );
 
   // -------------------------------------------------------------------------
