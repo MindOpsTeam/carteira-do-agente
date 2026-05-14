@@ -275,29 +275,34 @@ function ChatPage() {
       };
 
       try {
-        const res = await fetch(`${gateway.http_url}/v1/chat/completions`, {
+        const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
+        const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+        const res = await fetch(`${supaUrl}/functions/v1/chat-stream`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${gateway.gateway_token}`,
+            Authorization: `Bearer ${accessToken}`,
+            apikey,
             "Content-Type": "application/json",
             Accept: "text/event-stream",
           },
           body: JSON.stringify({
-            model: "openclaw",
             messages: payloadMessages,
-            stream: true,
             max_tokens: 2048,
           }),
           signal: ctrl.signal,
         });
 
         if (res.status === 401) {
-          gatewayCacheRef.current = null;
-          throw new Error("Token expirado, reconecte");
+          throw new Error("Sessão expirada — recarregue a página");
+        }
+        if (res.status === 503) {
+          const t = await res.text().catch(() => "");
+          throw new Error(t || "Marcos offline");
         }
         if (res.status === 404) {
           throw new Error("Modo streaming desabilitado na VPS. Pedir admin ativar.");
         }
+
         if (!res.ok || !res.body) {
           throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => "")}`);
         }
