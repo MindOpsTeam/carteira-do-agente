@@ -9,6 +9,8 @@ import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { getToolMeta } from "@/lib/tool-meta";
+import { beginChatStream, endChatStream } from "@/lib/chat-activity";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({ meta: [{ title: "Conversar com Marcos — Agente CFO" }] }),
