@@ -105,7 +105,7 @@ function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
-  const gatewayCacheRef = useRef<{ http_url: string; gateway_token: string } | null>(null);
+  
 
   // -------------------------------------------------------------------------
   // Helpers
