@@ -236,6 +236,36 @@ function IntegrationsIndex() {
           </Tooltip>
         </div>
 
+        {/* Channels (WhatsApp) status strip */}
+        <Card className="border-dashed">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10">
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="text-sm">
+                <div className="font-medium leading-tight">Canais WhatsApp</div>
+                <div className="text-xs text-muted-foreground">
+                  {waConnected === 0 ? (
+                    <>Nenhuma linha conectada — pareie a primeira em Configurações.</>
+                  ) : (
+                    <>
+                      {waConnected} {waConnected === 1 ? "linha conectada" : "linhas conectadas"} ·{" "}
+                      {waReceivers} recebendo chat do Marcos
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/settings/whatsapp">
+                Gerenciar
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative max-w-xs flex-1">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
