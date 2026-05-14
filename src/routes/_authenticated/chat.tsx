@@ -548,6 +548,12 @@ function ChatPage() {
   const send = async () => {
     const content = input.trim();
     if (!content || streaming) return;
+    if (!isPanelChannel) {
+      toast.info("Para enviar nessa linha, use o WhatsApp do celular", {
+        description: "O painel só envia mensagens pelo canal Painel web.",
+      });
+      return;
+    }
     setInput("");
 
     if (sseFailuresRef.current >= MAX_SSE_FAILURES) {
