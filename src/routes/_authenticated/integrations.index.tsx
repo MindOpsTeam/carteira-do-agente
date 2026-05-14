@@ -27,7 +27,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Circle,
+  MessageCircle,
+  ChevronRight,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import {
   INTEGRATIONS_SPEC,
   CATEGORY_LABEL,
