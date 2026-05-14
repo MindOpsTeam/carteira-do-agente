@@ -175,42 +175,13 @@ function ChatPage() {
   }, []);
 
   // -------------------------------------------------------------------------
-  // Connection check (heartbeat freshness via openclaw-ws-url)
+  // Connection: SSE goes through edge function chat-stream (CORS proxy).
+  // No gateway URL/token in the browser anymore.
   // -------------------------------------------------------------------------
-  const fetchGateway = useCallback(async (force = false) => {
-    if (!force && gatewayCacheRef.current) return gatewayCacheRef.current;
-    setConn("checking");
-    const { data: sess } = await supabase.auth.getSession();
-    const token = sess.session?.access_token;
-    if (!token) {
-      setConn("offline");
-      throw new Error("Sem sessão");
-    }
-    const { data, error } = await supabase.functions.invoke("openclaw-ws-url", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (error) {
-      setConn("offline");
-      throw error;
-    }
-    const { ws_url, gateway_token } = data as { ws_url: string; gateway_token: string };
-    const http_url = ws_url
-      .replace(/^wss:\/\//, "https://")
-      .replace(/^ws:\/\//, "http://")
-      .replace(/\/$/, "");
-    const cached = { http_url, gateway_token };
-    gatewayCacheRef.current = cached;
-    setConn("online");
-    return cached;
-  }, []);
-
   useEffect(() => {
     if (!threadId) return;
-    fetchGateway().catch(() => {
-      // toast handled per-action; avoid noise on boot
-    });
-  }, [threadId, fetchGateway]);
+    setConn("online");
+  }, [threadId]);
 
   // -------------------------------------------------------------------------
   // SSE streaming send
