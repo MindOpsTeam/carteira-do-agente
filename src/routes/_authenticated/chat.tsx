@@ -5,11 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff, Loader2, Check, X } from "lucide-react";
+import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { getToolMeta } from "@/lib/tool-meta";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({ meta: [{ title: "Conversar com Marcos — Agente CFO" }] }),
@@ -19,14 +18,6 @@ export const Route = createFileRoute("/_authenticated/chat")({
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-type ToolCall = {
-  id: string;
-  name: string;
-  status: "pending" | "done" | "error";
-  duration_ms?: number;
-  startedAt: number;
-};
-
 type ChatRow = {
   id: number | string;
   role: "user" | "marcos" | "system";
@@ -34,11 +25,18 @@ type ChatRow = {
   status: "pending" | "sent" | "delivered" | "error" | "streaming" | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
-  // local-only:
-  tools?: ToolCall[];
 };
 
-type ConnState = "idle" | "connecting" | "connected" | "disconnected" | "error";
+type ConnState = "idle" | "checking" | "online" | "offline" | "error";
+
+const HISTORY_LIMIT = 50;
+const MAX_SSE_FAILURES = 3;
+const SYSTEM_PROMPT =
+  "Você é Marcos, CFO virtual do usuário. Responde em português, conciso e direto. " +
+  "Tem acesso a integrações (HubSpot, Asaas, Supabase, etc) e pode executar ações via tools. " +
+  "Sempre confirme antes de qualquer ação destrutiva ou financeira.";
+const STREAM_FLUSH_MS = 150;
+const STREAM_TIMEOUT_MS = 3 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Markdown
@@ -46,14 +44,20 @@ type ConnState = "idle" | "connecting" | "connected" | "disconnected" | "error";
 function renderMarkdown(content: string) {
   const normalized = content.replace(/\\n/g, "\n");
   return (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 last:mb-0" {...props} />,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 last:mb-0" {...props} />,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
-        code: ({ node, inline, className, children, ...props }: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        code: ({ inline, children, ...props }: any) =>
           inline ? (
             <code className="bg-background/40 px-1 py-0.5 rounded text-xs font-mono" {...props}>
               {children}
@@ -63,16 +67,21 @@ function renderMarkdown(content: string) {
               <code {...props}>{children}</code>
             </pre>
           ),
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         a: ({ node, ...props }) => (
           <a className="underline text-primary" target="_blank" rel="noreferrer" {...props} />
         ),
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         table: ({ node, ...props }) => (
           <div className="overflow-x-auto my-2">
             <table className="text-xs border-collapse" {...props} />
           </div>
         ),
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         th: ({ node, ...props }) => <th className="border px-2 py-1 bg-background/40" {...props} />,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         td: ({ node, ...props }) => <td className="border px-2 py-1" {...props} />,
       }}
     >
@@ -82,35 +91,8 @@ function renderMarkdown(content: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool Pill
-// ---------------------------------------------------------------------------
-function ToolPill({ tool }: { tool: ToolCall }) {
-  const meta = getToolMeta(tool.name);
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-background/60 border border-border/60 px-2 py-0.5 text-[11px] font-medium my-0.5 mr-1">
-      <span>{meta.icon}</span>
-      <span className="text-foreground/80">{meta.label}</span>
-      <span className="text-muted-foreground font-mono text-[10px]">{tool.name}</span>
-      {tool.status === "pending" && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-      {tool.status === "done" && (
-        <>
-          <Check className="h-3 w-3 text-green-500" />
-          {tool.duration_ms != null && (
-            <span className="text-muted-foreground text-[10px]">{tool.duration_ms}ms</span>
-          )}
-        </>
-      )}
-      {tool.status === "error" && <X className="h-3 w-3 text-destructive" />}
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-const HISTORY_LIMIT = 50;
-const MAX_WS_FAILURES = 3;
-
 function ChatPage() {
   const [messages, setMessages] = useState<ChatRow[]>([]);
   const [input, setInput] = useState("");
@@ -119,42 +101,38 @@ function ChatPage() {
   const [conn, setConn] = useState<ConnState>("idle");
   const [streaming, setStreaming] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const wsFailuresRef = useRef(0);
-  const reconnectTimerRef = useRef<number | null>(null);
+  const sseFailuresRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  // streaming buffer accumulator + rAF flush
-  const bufferRef = useRef<string>("");
-  const toolsRef = useRef<ToolCall[]>([]);
-  const currentRequestIdRef = useRef<string | null>(null);
-  const currentUserContentRef = useRef<string>("");
-  const rafRef = useRef<number | null>(null);
-
-  const flush = useCallback(() => {
-    rafRef.current = null;
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (!last || last.role !== "marcos" || last.status !== "streaming") return prev;
-      return [
-        ...prev.slice(0, -1),
-        { ...last, content: bufferRef.current, tools: [...toolsRef.current] },
-      ];
-    });
-  }, []);
-
-  const scheduleFlush = useCallback(() => {
-    if (rafRef.current != null) return;
-    rafRef.current = requestAnimationFrame(flush);
-  }, [flush]);
+  const knownIdsRef = useRef<Set<string | number>>(new Set());
+  const gatewayCacheRef = useRef<{ http_url: string; gateway_token: string } | null>(null);
 
   // -------------------------------------------------------------------------
-  // Boot: user, history
+  // Helpers
+  // -------------------------------------------------------------------------
+  const trackId = (id: string | number) => {
+    knownIdsRef.current.add(id);
+  };
+
+  const upsertMessage = (row: ChatRow) => {
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === row.id);
+      if (idx === -1) return [...prev, row];
+      const next = prev.slice();
+      next[idx] = { ...next[idx], ...row };
+      return next;
+    });
+  };
+
+  // -------------------------------------------------------------------------
+  // Boot: user, history, realtime
   // -------------------------------------------------------------------------
   useEffect(() => {
+    let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
+      if (!u.user || !mounted) return;
       const tid = `panel:${u.user.id}`;
       setThreadId(tid);
 
@@ -164,340 +142,311 @@ function ChatPage() {
         .eq("thread_id", tid)
         .order("created_at", { ascending: false })
         .limit(HISTORY_LIMIT);
-      const ordered = (msgs ?? []).slice().reverse() as ChatRow[];
+      if (!mounted) return;
+      const ordered = ((msgs ?? []) as ChatRow[]).slice().reverse();
+      ordered.forEach((m) => trackId(m.id));
       setMessages(ordered);
       setLoading(false);
+
+      // realtime — INSERT only (avoids streaming UPDATE echo loops)
+      channel = supabase
+        .channel(`chat-${tid}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages",
+            filter: `thread_id=eq.${tid}`,
+          },
+          (p) => {
+            const row = p.new as ChatRow;
+            if (knownIdsRef.current.has(row.id)) return;
+            trackId(row.id);
+            setMessages((prev) => [...prev, row]);
+          },
+        )
+        .subscribe();
     })();
+    return () => {
+      mounted = false;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   // -------------------------------------------------------------------------
-  // WebSocket connect
+  // Connection check (heartbeat freshness via openclaw-ws-url)
   // -------------------------------------------------------------------------
-  const connect = useCallback(async () => {
-    if (wsRef.current && wsRef.current.readyState <= 1) return;
-    setConn("connecting");
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) throw new Error("Sem sessão");
-
-      const { data, error } = await supabase.functions.invoke("openclaw-ws-url", {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (error) throw error;
-      const { ws_url, gateway_token } = data as { ws_url: string; gateway_token: string };
-      const url = `${ws_url}?token=${encodeURIComponent(gateway_token)}`;
-
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        wsFailuresRef.current = 0;
-        setConn("connected");
-      };
-
-      ws.onmessage = (ev) => handleWsMessage(ev.data);
-
-      ws.onerror = () => {
-        setConn("error");
-      };
-
-      ws.onclose = () => {
-        wsRef.current = null;
-        setConn("disconnected");
-        setStreaming(false);
-        // backoff reconnect
-        if (wsFailuresRef.current < MAX_WS_FAILURES) {
-          wsFailuresRef.current += 1;
-          const delay = Math.min(1000 * 2 ** wsFailuresRef.current, 8000);
-          reconnectTimerRef.current = window.setTimeout(() => connect(), delay);
-        }
-      };
-    } catch (err) {
-      setConn("error");
-      wsFailuresRef.current += 1;
-      const msg = (err as Error)?.message ?? String(err);
-      if (msg.toLowerCase().includes("dormindo") || msg.includes("503")) {
-        // VPS offline — não fica em loop
-        return;
-      }
-      if (wsFailuresRef.current < MAX_WS_FAILURES) {
-        const delay = Math.min(1000 * 2 ** wsFailuresRef.current, 8000);
-        reconnectTimerRef.current = window.setTimeout(() => connect(), delay);
-      }
+  const fetchGateway = useCallback(async (force = false) => {
+    if (!force && gatewayCacheRef.current) return gatewayCacheRef.current;
+    setConn("checking");
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) {
+      setConn("offline");
+      throw new Error("Sem sessão");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const { data, error } = await supabase.functions.invoke("openclaw-ws-url", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (error) {
+      setConn("offline");
+      throw error;
+    }
+    const { ws_url, gateway_token } = data as { ws_url: string; gateway_token: string };
+    const http_url = ws_url
+      .replace(/^wss:\/\//, "https://")
+      .replace(/^ws:\/\//, "http://")
+      .replace(/\/$/, "");
+    const cached = { http_url, gateway_token };
+    gatewayCacheRef.current = cached;
+    setConn("online");
+    return cached;
   }, []);
 
   useEffect(() => {
     if (!threadId) return;
-    connect();
-    return () => {
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      wsRef.current?.close();
-      wsRef.current = null;
-    };
-  }, [threadId, connect]);
+    fetchGateway().catch(() => {
+      // toast handled per-action; avoid noise on boot
+    });
+  }, [threadId, fetchGateway]);
 
   // -------------------------------------------------------------------------
-  // Handle incoming WS frame
-  // Assumed JSON-RPC 2.0 over WS. Adapt when OpenClaw publishes spec.
+  // SSE streaming send
   // -------------------------------------------------------------------------
-  const handleWsMessage = useCallback(
-    (raw: unknown) => {
-      let msg: any;
+  const sendViaSse = useCallback(
+    async (content: string): Promise<boolean> => {
+      if (!threadId) return false;
+      let gateway: { http_url: string; gateway_token: string };
       try {
-        msg = typeof raw === "string" ? JSON.parse(raw) : raw;
-      } catch {
-        return;
-      }
-
-      // event-style: { method: "assistant.delta", params: { text } } OR
-      // { type: "assistant.delta", text } — handle both.
-      const evt: string = msg.method ?? msg.type ?? msg.event ?? "";
-      const params = msg.params ?? msg;
-
-      if (evt === "assistant.delta" || evt === "delta") {
-        const chunk: string = params.text ?? params.delta ?? params.content ?? "";
-        bufferRef.current += chunk;
-        scheduleFlush();
-        return;
-      }
-
-      if (evt === "tool.use" || evt === "tool_call" || evt === "tool.start") {
-        const id = String(params.id ?? params.tool_id ?? Date.now());
-        toolsRef.current = [
-          ...toolsRef.current,
-          { id, name: String(params.name ?? params.tool ?? "tool"), status: "pending", startedAt: Date.now() },
-        ];
-        scheduleFlush();
-        return;
-      }
-
-      if (evt === "tool.result" || evt === "tool.end") {
-        const id = String(params.id ?? params.tool_id ?? "");
-        const isError = params.error != null || params.status === "error";
-        toolsRef.current = toolsRef.current.map((t) =>
-          t.id === id || (!id && t.status === "pending")
-            ? {
-                ...t,
-                status: isError ? "error" : "done",
-                duration_ms: params.duration_ms ?? Date.now() - t.startedAt,
-              }
-            : t,
-        );
-        scheduleFlush();
-        return;
-      }
-
-      if (evt === "done" || evt === "agent.done" || evt === "complete") {
-        finalizeStream("done");
-        return;
-      }
-
-      if (evt === "error" || evt === "agent.error") {
-        finalizeStream("error", params.message ?? params.error ?? "Erro do gateway");
-        return;
-      }
-
-      // JSON-RPC response form: { id, result } or { id, error }
-      if (msg.id && (msg.result || msg.error)) {
-        if (msg.error) finalizeStream("error", msg.error.message ?? "Erro RPC");
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scheduleFlush],
-  );
-
-  const finalizeStream = useCallback(
-    async (kind: "done" | "error", errMsg?: string) => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      const finalText = bufferRef.current;
-      const tools = toolsRef.current;
-      const userContent = currentUserContentRef.current;
-
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (!last || last.role !== "marcos") return prev;
-        return [
-          ...prev.slice(0, -1),
-          {
-            ...last,
-            content: finalText || (kind === "error" ? `Erro: ${errMsg}` : ""),
-            status: kind === "error" ? "error" : "sent",
-            tools,
-          },
-        ];
-      });
-
-      setStreaming(false);
-
-      if (kind === "done" && threadId && finalText) {
-        // persist user + assistant
-        await supabase.from("chat_messages").insert([
-          { thread_id: threadId, role: "user", content: userContent, status: "sent" },
-          {
-            thread_id: threadId,
-            role: "marcos",
-            content: finalText,
-            status: "sent",
-            metadata: {
-              tools_used: tools.map((t) => ({ name: t.name, status: t.status, duration_ms: t.duration_ms })),
-            },
-          },
-        ]);
-      } else if (kind === "error") {
-        toast.error(errMsg ?? "Erro do Marcos");
-      }
-
-      // reset buffers
-      bufferRef.current = "";
-      toolsRef.current = [];
-      currentRequestIdRef.current = null;
-      currentUserContentRef.current = "";
-    },
-    [threadId],
-  );
-
-  // -------------------------------------------------------------------------
-  // Send via WS (with fallback)
-  // -------------------------------------------------------------------------
-  const sendViaWs = useCallback(
-    (content: string): boolean => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-      const reqId = `req_${Date.now()}`;
-      currentRequestIdRef.current = reqId;
-      currentUserContentRef.current = content;
-      bufferRef.current = "";
-      toolsRef.current = [];
-
-      // optimistic local user msg + streaming placeholder
-      const now = new Date().toISOString();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `local-u-${reqId}`,
-          role: "user",
-          content,
-          status: "sent",
-          metadata: null,
-          created_at: now,
-        },
-        {
-          id: `local-m-${reqId}`,
-          role: "marcos",
-          content: "",
-          status: "streaming",
-          metadata: null,
-          created_at: now,
-          tools: [],
-        },
-      ]);
-      setStreaming(true);
-
-      try {
-        ws.send(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: reqId,
-            method: "agent.run",
-            params: { message: content, thread_id: threadId },
-          }),
-        );
-        return true;
+        gateway = await fetchGateway();
       } catch {
         return false;
       }
-    },
-    [threadId],
-  );
 
-  const sendViaFallback = useCallback(
-    async (content: string) => {
-      toast.warning("Conexão direta falhou, usando modo lento");
-      try {
-        const { data: sess } = await supabase.auth.getSession();
-        const token = sess.session?.access_token;
-        if (!token) throw new Error("Sem sessão");
-        // optimistic
-        const now = new Date().toISOString();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `local-u-${Date.now()}`,
-            role: "user",
-            content,
-            status: "sent",
-            metadata: null,
-            created_at: now,
-          },
-        ]);
-        const { error } = await supabase.functions.invoke("chat-send-message", {
-          body: { content },
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (error) throw error;
-        // reload history shortly
-        setTimeout(async () => {
-          if (!threadId) return;
-          const { data: msgs } = await supabase
+      // 1. insert user message
+      const { data: userRow, error: userErr } = await supabase
+        .from("chat_messages")
+        .insert({ thread_id: threadId, role: "user", content, status: "sent" })
+        .select()
+        .single();
+      if (userErr || !userRow) {
+        toast.error("Falha ao salvar mensagem");
+        return false;
+      }
+      trackId(userRow.id);
+      upsertMessage(userRow as ChatRow);
+
+      // 2. insert placeholder assistant message
+      const { data: asstRow, error: asstErr } = await supabase
+        .from("chat_messages")
+        .insert({ thread_id: threadId, role: "marcos", content: "", status: "streaming" })
+        .select()
+        .single();
+      if (asstErr || !asstRow) {
+        toast.error("Falha ao criar placeholder");
+        return false;
+      }
+      trackId(asstRow.id);
+      upsertMessage(asstRow as ChatRow);
+      const asstId = asstRow.id as number;
+
+      // 3. build short history (last ~10 already-persisted messages)
+      const recent = messages.slice(-10).map((m) => ({
+        role: m.role === "marcos" ? "assistant" : m.role === "user" ? "user" : "system",
+        content: m.content,
+      }));
+      const payloadMessages = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...recent,
+        { role: "user", content },
+      ];
+
+      setStreaming(true);
+      let buffer = "";
+      let lastFlush = Date.now();
+      let lastChunk = Date.now();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+
+      // timeout watcher
+      const timeoutTimer = window.setInterval(() => {
+        if (Date.now() - lastChunk > STREAM_TIMEOUT_MS) {
+          ctrl.abort();
+        }
+      }, 10_000);
+
+      const flushToDb = async (final = false, errMsg?: string) => {
+        try {
+          await supabase
             .from("chat_messages")
-            .select("*")
-            .eq("thread_id", threadId)
-            .order("created_at", { ascending: false })
-            .limit(HISTORY_LIMIT);
-          setMessages(((msgs ?? []).slice().reverse()) as ChatRow[]);
-        }, 1500);
+            .update({
+              content: errMsg ? `${buffer}\n\n_Erro: ${errMsg}_` : buffer,
+              status: final ? (errMsg ? "error" : "sent") : "streaming",
+            })
+            .eq("id", asstId);
+        } catch {
+          // ignore transient
+        }
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === asstId
+              ? {
+                  ...m,
+                  content: errMsg ? `${buffer}\n\n_Erro: ${errMsg}_` : buffer,
+                  status: final ? (errMsg ? "error" : "sent") : "streaming",
+                }
+              : m,
+          ),
+        );
+        lastFlush = Date.now();
+      };
+
+      try {
+        const res = await fetch(`${gateway.http_url}/v1/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${gateway.gateway_token}`,
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+          },
+          body: JSON.stringify({
+            model: "openclaw",
+            messages: payloadMessages,
+            stream: true,
+            max_tokens: 2048,
+          }),
+          signal: ctrl.signal,
+        });
+
+        if (res.status === 401) {
+          gatewayCacheRef.current = null;
+          throw new Error("Token expirado, reconecte");
+        }
+        if (res.status === 404) {
+          throw new Error("Modo streaming desabilitado na VPS. Pedir admin ativar.");
+        }
+        if (!res.ok || !res.body) {
+          throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => "")}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let pending = "";
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          pending += decoder.decode(value, { stream: true });
+          const lines = pending.split("\n");
+          pending = lines.pop() ?? "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const payload = trimmed.slice(5).trim();
+            if (payload === "[DONE]") {
+              await flushToDb(true);
+              window.clearInterval(timeoutTimer);
+              setStreaming(false);
+              abortRef.current = null;
+              sseFailuresRef.current = 0;
+              return true;
+            }
+            try {
+              const json = JSON.parse(payload);
+              const delta = json.choices?.[0]?.delta?.content ?? "";
+              if (delta) {
+                buffer += delta;
+                lastChunk = Date.now();
+                if (Date.now() - lastFlush > STREAM_FLUSH_MS) {
+                  await flushToDb(false);
+                }
+              }
+            } catch {
+              // ignore non-JSON keepalives
+            }
+          }
+        }
+        // stream ended without [DONE]
+        await flushToDb(true);
+        window.clearInterval(timeoutTimer);
+        setStreaming(false);
+        abortRef.current = null;
+        sseFailuresRef.current = 0;
+        return true;
       } catch (err) {
-        toast.error(`Falha ao enviar: ${String(err)}`);
+        window.clearInterval(timeoutTimer);
+        setStreaming(false);
+        abortRef.current = null;
+        const aborted = (err as Error)?.name === "AbortError";
+        const errMsg = aborted ? "Cancelado pelo usuário" : (err as Error)?.message ?? String(err);
+        await flushToDb(true, errMsg);
+        if (!aborted) {
+          sseFailuresRef.current += 1;
+          toast.error(errMsg);
+        }
+        return aborted ? true : false;
       }
     },
-    [threadId],
+    [threadId, messages, fetchGateway],
   );
 
+  // -------------------------------------------------------------------------
+  // Legacy fallback
+  // -------------------------------------------------------------------------
+  const sendViaFallback = useCallback(
+    async (content: string) => {
+      toast.warning("SSE indisponível, usando modo lento");
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) {
+        toast.error("Sem sessão");
+        return;
+      }
+      const { error } = await supabase.functions.invoke("chat-send-message", {
+        body: { content },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (error) toast.error(`Falha: ${String(error)}`);
+    },
+    [],
+  );
+
+  // -------------------------------------------------------------------------
+  // Send dispatcher
+  // -------------------------------------------------------------------------
   const send = async () => {
     const content = input.trim();
     if (!content || streaming) return;
     setInput("");
-    const ok = sendViaWs(content);
-    if (!ok) {
-      if (wsFailuresRef.current >= MAX_WS_FAILURES) {
-        await sendViaFallback(content);
-      } else {
-        toast.error("WebSocket não conectado. Tentando reconectar...");
-        connect();
-      }
+
+    if (sseFailuresRef.current >= MAX_SSE_FAILURES) {
+      await sendViaFallback(content);
+      return;
+    }
+
+    const ok = await sendViaSse(content);
+    if (!ok && sseFailuresRef.current >= MAX_SSE_FAILURES) {
+      await sendViaFallback(content);
     }
   };
 
   const cancel = () => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN && currentRequestIdRef.current) {
-      try {
-        ws.send(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            method: "agent.cancel",
-            params: { id: currentRequestIdRef.current },
-          }),
-        );
-      } catch {
-        // ignore
-      }
-    }
-    finalizeStream("done");
+    abortRef.current?.abort();
   };
 
-  const reconnect = () => {
-    wsFailuresRef.current = 0;
-    wsRef.current?.close();
-    wsRef.current = null;
-    connect();
+  const reconnect = async () => {
+    sseFailuresRef.current = 0;
+    gatewayCacheRef.current = null;
+    try {
+      await fetchGateway(true);
+      toast.success("Reconectado");
+    } catch (err) {
+      toast.error(`Falha: ${(err as Error)?.message ?? String(err)}`);
+    }
   };
 
   const clearHistory = async () => {
@@ -508,6 +457,7 @@ function ChatPage() {
       toast.error("Não foi possível limpar");
       return;
     }
+    knownIdsRef.current.clear();
     setMessages([]);
     toast.success("Histórico limpo");
   };
@@ -521,23 +471,24 @@ function ChatPage() {
   // Render
   // -------------------------------------------------------------------------
   const connDot =
-    conn === "connected" ? "bg-green-500" :
-    conn === "connecting" ? "bg-yellow-500 animate-pulse" :
-    conn === "error" || conn === "disconnected" ? "bg-red-500" :
+    conn === "online" ? "bg-green-500" :
+    conn === "checking" ? "bg-yellow-500 animate-pulse" :
+    conn === "offline" || conn === "error" ? "bg-red-500" :
     "bg-muted-foreground/40";
 
   const connLabel =
-    conn === "connected" ? "ao vivo · streaming via OpenClaw" :
-    conn === "connecting" ? "conectando..." :
-    conn === "error" ? "falha de conexão" :
-    conn === "disconnected" ? "desconectado" :
-    "offline";
+    conn === "online" ? "conectado · streaming SSE" :
+    conn === "checking" ? "verificando..." :
+    conn === "offline" ? "Marcos offline" :
+    conn === "error" ? "erro de conexão" :
+    "—";
 
-  const inputDisabled = streaming || conn !== "connected";
+  const inputDisabled = streaming || conn === "offline";
   const inputPlaceholder =
-    conn === "connected" ? "Pergunte algo ao Marcos..." :
-    conn === "connecting" ? "Conectando ao Marcos..." :
-    "Marcos está dormindo — verifique em /settings";
+    conn === "online" ? "Pergunte algo ao Marcos..." :
+    conn === "checking" ? "Conectando..." :
+    conn === "offline" ? "Marcos está offline — verifique em /settings" :
+    "Pergunte algo ao Marcos...";
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] max-w-4xl mx-auto w-full">
@@ -551,8 +502,8 @@ function ChatPage() {
             <div className="font-semibold leading-tight flex items-center gap-2">
               Marcos — seu CFO virtual
               <span className="inline-flex items-center gap-1 text-[11px] font-normal px-1.5 py-0.5 rounded-full bg-muted/50">
-                {conn === "connected" ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                {conn === "connected" ? "ao vivo" : "off"}
+                {conn === "online" ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                {conn === "online" ? "online" : "off"}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -562,7 +513,7 @@ function ChatPage() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {(conn === "disconnected" || conn === "error") && (
+          {(conn === "offline" || conn === "error") && (
             <Button variant="ghost" size="sm" onClick={reconnect}>
               <RefreshCw className="h-4 w-4 mr-1" />
               Reconectar
@@ -590,7 +541,6 @@ function ChatPage() {
             messages.map((m) => {
               const isUser = m.role === "user";
               const isStreaming = m.status === "streaming";
-              const tools = m.tools ?? ((m.metadata as any)?.tools_used as ToolCall[] | undefined) ?? [];
               return (
                 <div
                   key={m.id}
@@ -605,20 +555,6 @@ function ChatPage() {
                         : "bg-muted text-foreground"
                     } ${m.status === "error" ? "border border-destructive/50" : ""}`}
                   >
-                    {tools.length > 0 && !isUser && (
-                      <div className="mb-1.5 -ml-0.5">
-                        {tools.map((t, i) => (
-                          <ToolPill
-                            key={(t as ToolCall).id ?? i}
-                            tool={
-                              "startedAt" in (t as object)
-                                ? (t as ToolCall)
-                                : { id: String(i), name: (t as any).name, status: (t as any).status ?? "done", duration_ms: (t as any).duration_ms, startedAt: 0 }
-                            }
-                          />
-                        ))}
-                      </div>
-                    )}
                     {isUser ? (
                       <div>{m.content}</div>
                     ) : m.content ? (
@@ -633,6 +569,7 @@ function ChatPage() {
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
+                        <span className="ml-2 text-xs">Marcos pensando...</span>
                       </div>
                     ) : null}
                     {m.status === "error" && !m.content && (
