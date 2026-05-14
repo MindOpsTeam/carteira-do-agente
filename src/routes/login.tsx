@@ -1,5 +1,5 @@
-// Login: email + password via signInWithPassword (no OTP). Rebuild marker.
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+// Login: email + password com mensagens claras + esqueci senha
+import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -31,34 +31,24 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const readField = (id: string, fallback: string) => {
-    if (typeof document === "undefined") return fallback;
-    const el = document.getElementById(id) as HTMLInputElement | null;
-    return el?.value || fallback;
-  };
+  const [resetLoading, setResetLoading] = useState(false);
+  const [showResetHighlight, setShowResetHighlight] = useState(false);
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const finalEmail = email || readField("email", "");
-    const finalPassword = password || readField("password", "");
 
-    if (!finalEmail || !finalPassword) {
+    if (!email || !password) {
       toast.error("Preencha email e senha");
       return;
     }
-    if (finalPassword.length < 6) {
+    if (password.length < 6) {
       toast.error("Senha precisa de pelo menos 6 caracteres");
       return;
     }
 
     setLoading(true);
 
-    // Tenta login direto
-    const signInResult = await supabase.auth.signInWithPassword({
-      email: finalEmail,
-      password: finalPassword,
-    });
+    const signInResult = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInResult.data.session) {
       setLoading(false);
@@ -67,48 +57,67 @@ function LoginPage() {
       return;
     }
 
-    // Se falhou por "Invalid login credentials", tenta criar conta
-    const msg = signInResult.error?.message || "";
-    const isInvalidCreds = /invalid login credentials/i.test(msg);
+    const errMsg = signInResult.error?.message || "";
 
-    if (!isInvalidCreds) {
+    if (/email not confirmed/i.test(errMsg)) {
       setLoading(false);
-      toast.error(msg || "Falha ao entrar");
+      toast.error("Email não confirmado", { description: "Verifique sua caixa de entrada." });
       return;
     }
 
-    // Cria conta nova
-    const signUpResult = await supabase.auth.signUp({
-      email: finalEmail,
-      password: finalPassword,
-    });
+    if (/invalid login credentials/i.test(errMsg)) {
+      // Pode ser senha errada OU conta não existe — testa via signUp
+      const signUpResult = await supabase.auth.signUp({ email, password });
 
-    if (signUpResult.error) {
+      if (
+        signUpResult.error?.message &&
+        /already registered|user already exists/i.test(signUpResult.error.message)
+      ) {
+        setLoading(false);
+        toast.error("Email ou senha incorretos", {
+          description: "Tente novamente ou redefina sua senha.",
+        });
+        setShowResetHighlight(true);
+        return;
+      }
+
+      if (signUpResult.data.session) {
+        setLoading(false);
+        toast.success("Conta criada");
+        navigate({ to: "/" });
+        return;
+      }
+
+      if (signUpResult.data.user) {
+        setLoading(false);
+        toast.success("Conta criada", { description: "Verifique seu email para confirmar." });
+        return;
+      }
+
       setLoading(false);
-      toast.error(signUpResult.error.message);
+      toast.error(signUpResult.error?.message || "Falha ao criar conta");
       return;
     }
 
-    // Se já criou com session ativa (mailer_autoconfirm=true), entra
-    if (signUpResult.data.session) {
-      setLoading(false);
-      toast.success("Conta criada");
-      navigate({ to: "/" });
-      return;
-    }
-
-    // Caso autoconfirm não tenha pegado, tenta login de novo
-    const retry = await supabase.auth.signInWithPassword({
-      email: finalEmail,
-      password: finalPassword,
-    });
     setLoading(false);
-    if (retry.data.session) {
-      toast.success("Conta criada");
-      navigate({ to: "/" });
+    toast.error(errMsg || "Falha ao entrar");
+  };
+
+  const sendReset = async () => {
+    if (!email) {
+      toast.error("Informe seu email primeiro");
       return;
     }
-    toast.error(retry.error?.message || "Conta criada mas precisa confirmar email. Verifique sua caixa.");
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Link enviado", { description: "Confira seu email para redefinir a senha." });
   };
 
   return (
@@ -152,6 +161,16 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Entrar
+            </Button>
+            <Button
+              type="button"
+              variant={showResetHighlight ? "secondary" : "ghost"}
+              className="w-full"
+              onClick={sendReset}
+              disabled={resetLoading || loading}
+            >
+              {resetLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Esqueci minha senha
             </Button>
             <p className="text-xs text-muted-foreground text-center pt-2">
               Primeira vez? A conta é criada automaticamente com esses dados.
