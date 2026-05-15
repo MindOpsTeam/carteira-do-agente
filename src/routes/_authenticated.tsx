@@ -8,6 +8,10 @@ import { hasActiveChatStream } from "@/lib/chat-activity";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
+    // Skip on SSR — supabase session lives in localStorage (browser-only).
+    // Running getSession() on the server always returns null and would kick
+    // an authenticated user back to /login on every hot reload / SSR pass.
+    if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
       // Don't kick the user mid-stream — token may just be refreshing.
