@@ -258,7 +258,7 @@ function IntegrationsIndex() {
               </div>
             </div>
             <Button asChild size="sm" variant="outline">
-              <Link to="/settings/whatsapp">
+              <Link to="/settings/whatsapp-baileys">
                 Gerenciar
                 <ChevronRight className="h-4 w-4" />
               </Link>
