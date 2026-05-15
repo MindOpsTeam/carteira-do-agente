@@ -14,9 +14,6 @@ const ALLOWED_ACTIONS = new Set([
   "openclaw_config_get", "openclaw_config_set", "openclaw_config_unset",
   "openclaw_plugins_install", "openclaw_plugins_list",
   "mcp_sync_now",
-  // Sprint 52 — WhatsApp Baileys nativo (plugin @openclaw/whatsapp)
-  "whatsapp_pair_status", "whatsapp_pair_start", "whatsapp_pair_qr",
-  "whatsapp_pair_cancel", "whatsapp_disconnect",
 ]);
 
 Deno.serve(async (req: Request) => {

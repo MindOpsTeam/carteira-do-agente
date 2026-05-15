@@ -27,7 +27,6 @@ import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_authenticated/integrations.index'
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
 import { Route as AuthenticatedAutomationsIndexRouteImport } from './routes/_authenticated/automations.index'
-import { Route as AuthenticatedSettingsWhatsappBaileysRouteImport } from './routes/_authenticated/settings_.whatsapp-baileys'
 import { Route as AuthenticatedSettingsSistemaRouteImport } from './routes/_authenticated/settings_.sistema'
 import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authenticated/settings_.rules'
 import { Route as AuthenticatedIntegrationsSupabaseRouteImport } from './routes/_authenticated/integrations.supabase'
@@ -135,12 +134,6 @@ const AuthenticatedAutomationsIndexRoute =
   AuthenticatedAutomationsIndexRouteImport.update({
     id: '/automations/',
     path: '/automations/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedSettingsWhatsappBaileysRoute =
-  AuthenticatedSettingsWhatsappBaileysRouteImport.update({
-    id: '/settings_/whatsapp-baileys',
-    path: '/settings/whatsapp-baileys',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSettingsSistemaRoute =
@@ -259,7 +252,6 @@ export interface FileRoutesByFullPath {
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/settings/sistema': typeof AuthenticatedSettingsSistemaRoute
-  '/settings/whatsapp-baileys': typeof AuthenticatedSettingsWhatsappBaileysRoute
   '/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
   '/integrations/': typeof AuthenticatedIntegrationsIndexRoute
@@ -294,7 +286,6 @@ export interface FileRoutesByTo {
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/settings/sistema': typeof AuthenticatedSettingsSistemaRoute
-  '/settings/whatsapp-baileys': typeof AuthenticatedSettingsWhatsappBaileysRoute
   '/automations': typeof AuthenticatedAutomationsIndexRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
   '/integrations': typeof AuthenticatedIntegrationsIndexRoute
@@ -331,7 +322,6 @@ export interface FileRoutesById {
   '/_authenticated/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/_authenticated/settings_/rules': typeof AuthenticatedSettingsRulesRoute
   '/_authenticated/settings_/sistema': typeof AuthenticatedSettingsSistemaRoute
-  '/_authenticated/settings_/whatsapp-baileys': typeof AuthenticatedSettingsWhatsappBaileysRoute
   '/_authenticated/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
   '/_authenticated/integrations/': typeof AuthenticatedIntegrationsIndexRoute
@@ -368,7 +358,6 @@ export interface FileRouteTypes {
     | '/integrations/supabase'
     | '/settings/rules'
     | '/settings/sistema'
-    | '/settings/whatsapp-baileys'
     | '/automations/'
     | '/instances/'
     | '/integrations/'
@@ -403,7 +392,6 @@ export interface FileRouteTypes {
     | '/integrations/supabase'
     | '/settings/rules'
     | '/settings/sistema'
-    | '/settings/whatsapp-baileys'
     | '/automations'
     | '/instances'
     | '/integrations'
@@ -439,7 +427,6 @@ export interface FileRouteTypes {
     | '/_authenticated/integrations/supabase'
     | '/_authenticated/settings_/rules'
     | '/_authenticated/settings_/sistema'
-    | '/_authenticated/settings_/whatsapp-baileys'
     | '/_authenticated/automations/'
     | '/_authenticated/instances/'
     | '/_authenticated/integrations/'
@@ -584,13 +571,6 @@ declare module '@tanstack/react-router' {
       path: '/automations'
       fullPath: '/automations/'
       preLoaderRoute: typeof AuthenticatedAutomationsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/settings_/whatsapp-baileys': {
-      id: '/_authenticated/settings_/whatsapp-baileys'
-      path: '/settings/whatsapp-baileys'
-      fullPath: '/settings/whatsapp-baileys'
-      preLoaderRoute: typeof AuthenticatedSettingsWhatsappBaileysRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings_/sistema': {
@@ -797,7 +777,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegrationsSupabaseRoute: typeof AuthenticatedIntegrationsSupabaseRoute
   AuthenticatedSettingsRulesRoute: typeof AuthenticatedSettingsRulesRoute
   AuthenticatedSettingsSistemaRoute: typeof AuthenticatedSettingsSistemaRoute
-  AuthenticatedSettingsWhatsappBaileysRoute: typeof AuthenticatedSettingsWhatsappBaileysRoute
   AuthenticatedAutomationsIndexRoute: typeof AuthenticatedAutomationsIndexRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
   AuthenticatedIntegrationsIndexRoute: typeof AuthenticatedIntegrationsIndexRoute
@@ -830,8 +809,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedIntegrationsSupabaseRoute,
   AuthenticatedSettingsRulesRoute: AuthenticatedSettingsRulesRoute,
   AuthenticatedSettingsSistemaRoute: AuthenticatedSettingsSistemaRoute,
-  AuthenticatedSettingsWhatsappBaileysRoute:
-    AuthenticatedSettingsWhatsappBaileysRoute,
   AuthenticatedAutomationsIndexRoute: AuthenticatedAutomationsIndexRoute,
   AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
   AuthenticatedIntegrationsIndexRoute: AuthenticatedIntegrationsIndexRoute,

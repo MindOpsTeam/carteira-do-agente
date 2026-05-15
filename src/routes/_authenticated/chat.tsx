@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff, MessageCircle } from "lucide-react";
+import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide-react";
 import {
   Tabs,
   TabsList,
@@ -36,21 +36,16 @@ type ChatRow = {
 };
 
 type ChannelOption = {
-  id: string;            // unique key, ex "panel" or "wa:principal"
-  label: string;         // user-facing
-  threadId: string;      // panel:<uid>  or  wa:<instance_name>:<phone>
-  kind: "panel" | "whatsapp";
-  phone?: string | null;
+  id: string;
+  label: string;
+  threadId: string;
+  kind: "panel";
 };
 
 type ConnState = "idle" | "checking" | "online" | "offline" | "error";
 
 const HISTORY_LIMIT = 50;
 const MAX_SSE_FAILURES = 3;
-const SYSTEM_PROMPT =
-  "Você é Marcos, CFO virtual do usuário. Responde em português, conciso e direto. " +
-  "Tem acesso a integrações (HubSpot, Asaas, Supabase, etc) e pode executar ações via tools. " +
-  "Sempre confirme antes de qualquer ação destrutiva ou financeira.";
 const STREAM_FLUSH_MS = 150;
 // Granular SSE health thresholds (ms since last chunk)
 const STREAM_WAIT_SOFT_MS = 15_000;   // → "Marcos pensando…"
@@ -172,24 +167,6 @@ function ChatPage() {
           kind: "panel",
         },
       ];
-
-      // discover connected WhatsApp instances flagged to receive Marcos chat
-      const { data: waList } = await supabase
-        .from("whatsapp_instances")
-        .select("instance_name, display_name, phone_number, status, receives_marcos_chat")
-        .eq("status", "connected")
-        .eq("receives_marcos_chat", true);
-
-      for (const w of waList ?? []) {
-        if (!w.phone_number) continue;
-        baseChannels.push({
-          id: `wa:${w.instance_name}`,
-          label: `WhatsApp · ${w.display_name ?? w.instance_name}`,
-          threadId: `wa:${w.instance_name}:${w.phone_number}`,
-          kind: "whatsapp",
-          phone: w.phone_number,
-        });
-      }
       if (!mounted) return;
       setChannels(baseChannels);
     })();
@@ -309,11 +286,9 @@ function ChatPage() {
         role: m.role === "marcos" ? "assistant" : m.role === "user" ? "user" : "system",
         content: m.content,
       }));
-      const payloadMessages = [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...recent,
-        { role: "user", content },
-      ];
+      // No system prompt injection — Marcos persona vem do skill agente-cfo
+      // carregado dentro do OpenClaw na VPS.
+      const payloadMessages = [...recent, { role: "user", content }];
 
       // Single SSE attempt. Returns:
       //   "ok"      — got [DONE] or stream ended cleanly
@@ -661,10 +636,9 @@ function ChatPage() {
     conn === "error" ? "erro de conexão" :
     "—";
 
-  const inputDisabled = streaming || conn === "offline" || !isPanelChannel;
-  const inputPlaceholder = !isPanelChannel
-    ? `Leitura apenas — envie pelo WhatsApp ${activeChannel?.phone ?? ""}`
-    : conn === "online" ? "Pergunte algo ao Marcos..." :
+  const inputDisabled = streaming || conn === "offline";
+  const inputPlaceholder =
+    conn === "online" ? "Pergunte algo ao Marcos..." :
     conn === "checking" ? "Conectando..." :
     conn === "offline" ? "Marcos está offline — verifique em /settings" :
     "Pergunte algo ao Marcos...";
@@ -711,21 +685,7 @@ function ChatPage() {
         </div>
       </div>
 
-      {/* Channel selector */}
-      {channels.length > 1 && (
-        <div className="pt-3">
-          <Tabs value={activeChannelId} onValueChange={setActiveChannelId}>
-            <TabsList className="h-9">
-              {channels.map((c) => (
-                <TabsTrigger key={c.id} value={c.id} className="text-xs gap-1.5">
-                  {c.kind === "whatsapp" ? <MessageCircle className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                  {c.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-      )}
+      {/* Channel selector removed — only panel channel exists */}
 
       {/* Body */}
       <ScrollArea className="flex-1 my-3">
@@ -810,12 +770,6 @@ function ChatPage() {
                     ) : null}
                     {m.status === "error" && !m.content && (
                       <div className="text-xs text-destructive">Falha ao receber resposta</div>
-                    )}
-                    {m.channel && m.channel !== "panel" && (
-                      <div className="mt-1 text-[10px] opacity-60 inline-flex items-center gap-1">
-                        <MessageCircle className="h-2.5 w-2.5" />
-                        via {m.channel.startsWith("whatsapp") ? "WhatsApp" : m.channel}
-                      </div>
                     )}
                   </div>
                 </div>

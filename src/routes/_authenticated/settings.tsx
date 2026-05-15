@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Terminal, Server, HelpCircle, MessageCircle, ChevronRight, Cpu } from "lucide-react";
-import { TelegramCard } from "@/components/telegram-card";
+import { LogOut, Terminal, Server, HelpCircle, ChevronRight, Cpu } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/format";
@@ -216,34 +215,7 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground">
-                Pareie seu WhatsApp pessoal pra conversar com Marcos. Sem servidor extra,
-                via plugin nativo do OpenClaw.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link to="/settings/whatsapp-baileys">
-                Abrir
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Telegram */}
-      <TelegramCard />
 
       {/* Sistema (avançado) */}
       <Card>

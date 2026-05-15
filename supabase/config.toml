@@ -154,37 +154,6 @@ verify_jwt = false
 [functions.vps-trigger-update]
 verify_jwt = true
 
-# Sprint 27 — Evolution API (WhatsApp multi-instância)
-[functions.evolution-config-get]
-verify_jwt = true
-
-[functions.evolution-config-save]
-verify_jwt = true
-
-[functions.evolution-config-test]
-verify_jwt = true
-
-[functions.whatsapp-instances-list]
-verify_jwt = true
-
-[functions.whatsapp-instances-save]
-verify_jwt = true
-
-[functions.whatsapp-instances-delete]
-verify_jwt = true
-
-[functions.evolution-config-vps]
-verify_jwt = false
-
-[functions.whatsapp-instances-vps-list]
-verify_jwt = false
-
-[functions.whatsapp-instances-vps-update]
-verify_jwt = false
-
-[functions.whatsapp-incoming-webhook]
-verify_jwt = false
-
 # Sprint 30 — HubSpot OAuth
 [functions.hubspot-oauth-exchange]
 verify_jwt = true
@@ -208,28 +177,6 @@ verify_jwt = false
 [functions.vps-admin-action]
 verify_jwt = true
 
-# Sprint 38 — Telegram bots (CRUD + webhook)
-[functions.telegram-bots-list]
-verify_jwt = true
-
-[functions.telegram-bots-save]
-verify_jwt = true
-
-[functions.telegram-bots-delete]
-verify_jwt = true
-
-[functions.telegram-bots-test]
-verify_jwt = true
-
-[functions.telegram-bots-vps-list]
-verify_jwt = false
-
-[functions.telegram-bots-vps-update]
-verify_jwt = false
-
-[functions.telegram-incoming-webhook]
-verify_jwt = false
-
 # Sprint 43 — Alerts CRUD
 [functions.alerts-list]
 verify_jwt = true
@@ -245,7 +192,3 @@ verify_jwt = true
 
 [functions.alerts-test]
 verify_jwt = true
-
-# Sprint 53 — Marcos context (system prompt unificado)
-[functions.marcos-context]
-verify_jwt = false

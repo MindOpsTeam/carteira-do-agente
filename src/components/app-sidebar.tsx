@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare, MessageCircle, Sparkles, BarChart3, Target, Zap, Activity, Bell } from "lucide-react";
+import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare, Sparkles, BarChart3, Target, Zap, Activity, Bell } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,7 +19,7 @@ const items = [
   { title: "Metas", url: "/goals", icon: Target },
   { title: "Automações", url: "/automations", icon: Zap },
   { title: "Instâncias", url: "/instances", icon: MonitorSmartphone },
-  { title: "WhatsApp", url: "/settings/whatsapp-baileys", icon: MessageCircle },
+  
   { title: "Observabilidade", url: "/observability", icon: Activity },
   { title: "Alertas", url: "/alerts", icon: Bell },
   { title: "Eventos", url: "/events", icon: ScrollText },

@@ -10,7 +10,6 @@
 
 import { adminClient, corsHeaders, errorResponse } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getMarcosContext } from "../_shared/marcos-context.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -61,19 +60,9 @@ Deno.serve(async (req: Request) => {
 
   const upstreamUrl = `${instance.ingress_url.replace(/\/$/, "")}/v1/chat/completions`;
 
-  // Sprint 53 — injeta system prompt unificado vindo da VPS (cache 5min).
-  // Só prepende se o cliente não já enviou um message com role=system.
-  const incoming = body.messages ?? [];
-  const hasSystem = incoming.some((m) => m.role === "system");
-  let messages = incoming;
-  if (!hasSystem) {
-    try {
-      const ctx = await getMarcosContext();
-      messages = [{ role: "system", content: ctx.system_prompt }, ...incoming];
-    } catch {
-      /* fallback silencioso — segue sem system */
-    }
-  }
+  // Proxy transparente — Marcos persona vem do skill agente-cfo dentro do
+  // OpenClaw na VPS. Nada é injetado aqui.
+  const messages = body.messages ?? [];
 
   let upstream: Response;
   try {
