@@ -52,7 +52,11 @@ const SYSTEM_PROMPT =
   "Tem acesso a integrações (HubSpot, Asaas, Supabase, etc) e pode executar ações via tools. " +
   "Sempre confirme antes de qualquer ação destrutiva ou financeira.";
 const STREAM_FLUSH_MS = 150;
-const STREAM_TIMEOUT_MS = 3 * 60 * 1000;
+// Granular SSE health thresholds (ms since last chunk)
+const STREAM_WAIT_SOFT_MS = 15_000;   // → "Marcos pensando…"
+const STREAM_WAIT_HARD_MS = 30_000;   // → "Demorando mais que o esperado…"
+const STREAM_TIMEOUT_MS  = 45_000;    // → abort + retry 1x
+const STREAM_TICK_MS     = 2_000;
 
 // ---------------------------------------------------------------------------
 // Markdown
