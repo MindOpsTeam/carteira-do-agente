@@ -17,6 +17,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedObservabilityRouteImport } from './routes/_authenticated/observability'
 import { Route as AuthenticatedLlmUsageRouteImport } from './routes/_authenticated/llm-usage'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedEventsRouteImport } from './routes/_authenticated/events'
@@ -81,6 +82,12 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedObservabilityRoute =
+  AuthenticatedObservabilityRouteImport.update({
+    id: '/observability',
+    path: '/observability',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedLlmUsageRoute = AuthenticatedLlmUsageRouteImport.update({
   id: '/llm-usage',
   path: '/llm-usage',
@@ -232,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/events': typeof AuthenticatedEventsRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/observability': typeof AuthenticatedObservabilityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/automations/$id': typeof AuthenticatedAutomationsIdRoute
@@ -264,6 +272,7 @@ export interface FileRoutesByTo {
   '/events': typeof AuthenticatedEventsRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/observability': typeof AuthenticatedObservabilityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
@@ -299,6 +308,7 @@ export interface FileRoutesById {
   '/_authenticated/events': typeof AuthenticatedEventsRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/llm-usage': typeof AuthenticatedLlmUsageRoute
+  '/_authenticated/observability': typeof AuthenticatedObservabilityRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/goals'
     | '/llm-usage'
+    | '/observability'
     | '/reports'
     | '/settings'
     | '/automations/$id'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/goals'
     | '/llm-usage'
+    | '/observability'
     | '/reports'
     | '/settings'
     | '/'
@@ -401,6 +413,7 @@ export interface FileRouteTypes {
     | '/_authenticated/events'
     | '/_authenticated/goals'
     | '/_authenticated/llm-usage'
+    | '/_authenticated/observability'
     | '/_authenticated/reports'
     | '/_authenticated/settings'
     | '/_authenticated/'
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/observability': {
+      id: '/_authenticated/observability'
+      path: '/observability'
+      fullPath: '/observability'
+      preLoaderRoute: typeof AuthenticatedObservabilityRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/llm-usage': {
@@ -743,6 +763,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEventsRoute: typeof AuthenticatedEventsRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedLlmUsageRoute: typeof AuthenticatedLlmUsageRoute
+  AuthenticatedObservabilityRoute: typeof AuthenticatedObservabilityRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -768,6 +789,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEventsRoute: AuthenticatedEventsRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedLlmUsageRoute: AuthenticatedLlmUsageRoute,
+  AuthenticatedObservabilityRoute: AuthenticatedObservabilityRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
