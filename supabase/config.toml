@@ -229,3 +229,19 @@ verify_jwt = false
 
 [functions.telegram-incoming-webhook]
 verify_jwt = false
+
+# Sprint 43 — Alerts CRUD
+[functions.alerts-list]
+verify_jwt = true
+
+[functions.alerts-save]
+verify_jwt = true
+
+[functions.alerts-delete]
+verify_jwt = true
+
+[functions.alerts-history-list]
+verify_jwt = true
+
+[functions.alerts-test]
+verify_jwt = true
