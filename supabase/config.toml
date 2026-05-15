@@ -154,37 +154,6 @@ verify_jwt = false
 [functions.vps-trigger-update]
 verify_jwt = true
 
-# Sprint 27 — Evolution API (WhatsApp multi-instância)
-[functions.evolution-config-get]
-verify_jwt = true
-
-[functions.evolution-config-save]
-verify_jwt = true
-
-[functions.evolution-config-test]
-verify_jwt = true
-
-[functions.whatsapp-instances-list]
-verify_jwt = true
-
-[functions.whatsapp-instances-save]
-verify_jwt = true
-
-[functions.whatsapp-instances-delete]
-verify_jwt = true
-
-[functions.evolution-config-vps]
-verify_jwt = false
-
-[functions.whatsapp-instances-vps-list]
-verify_jwt = false
-
-[functions.whatsapp-instances-vps-update]
-verify_jwt = false
-
-[functions.whatsapp-incoming-webhook]
-verify_jwt = false
-
 # Sprint 30 — HubSpot OAuth
 [functions.hubspot-oauth-exchange]
 verify_jwt = true
