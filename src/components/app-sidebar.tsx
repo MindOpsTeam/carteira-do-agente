@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare, Sparkles, BarChart3, Target, Zap } from "lucide-react";
+import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare, Sparkles, BarChart3, Target, Zap, Activity } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +19,7 @@ const items = [
   { title: "Metas", url: "/goals", icon: Target },
   { title: "Automações", url: "/automations", icon: Zap },
   { title: "Instâncias", url: "/instances", icon: MonitorSmartphone },
+  { title: "Observabilidade", url: "/observability", icon: Activity },
   { title: "Eventos", url: "/events", icon: ScrollText },
   { title: "Custo LLM", url: "/llm-usage", icon: DollarSign },
   { title: "Auditoria", url: "/audit", icon: ShieldCheck },
