@@ -245,3 +245,7 @@ verify_jwt = true
 
 [functions.alerts-test]
 verify_jwt = true
+
+# Sprint 53 — Marcos context (system prompt unificado)
+[functions.marcos-context]
+verify_jwt = false
