@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff, MessageCircle } from "lucide-react";
+import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide-react";
 import {
   Tabs,
   TabsList,
