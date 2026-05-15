@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerts_config: {
+        Row: {
+          active: boolean
+          channels: Json
+          condition: Json
+          cooldown_min: number
+          created_at: string
+          id: string
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          channels?: Json
+          condition?: Json
+          cooldown_min?: number
+          created_at?: string
+          id?: string
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          channels?: Json
+          condition?: Json
+          cooldown_min?: number
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      alerts_history: {
+        Row: {
+          alert_id: string | null
+          id: number
+          payload: Json | null
+          resolved_at: string | null
+          status: string
+          triggered_at: string
+        }
+        Insert: {
+          alert_id?: string | null
+          id?: number
+          payload?: Json | null
+          resolved_at?: string | null
+          status?: string
+          triggered_at?: string
+        }
+        Update: {
+          alert_id?: string | null
+          id?: number
+          payload?: Json | null
+          resolved_at?: string | null
+          status?: string
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_history_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
