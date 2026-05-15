@@ -167,24 +167,6 @@ function ChatPage() {
           kind: "panel",
         },
       ];
-
-      // discover connected WhatsApp instances flagged to receive Marcos chat
-      const { data: waList } = await supabase
-        .from("whatsapp_instances")
-        .select("instance_name, display_name, phone_number, status, receives_marcos_chat")
-        .eq("status", "connected")
-        .eq("receives_marcos_chat", true);
-
-      for (const w of waList ?? []) {
-        if (!w.phone_number) continue;
-        baseChannels.push({
-          id: `wa:${w.instance_name}`,
-          label: `WhatsApp · ${w.display_name ?? w.instance_name}`,
-          threadId: `wa:${w.instance_name}:${w.phone_number}`,
-          kind: "whatsapp",
-          phone: w.phone_number,
-        });
-      }
       if (!mounted) return;
       setChannels(baseChannels);
     })();
