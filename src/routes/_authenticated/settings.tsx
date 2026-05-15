@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LogOut, Terminal, Server, HelpCircle, MessageCircle, ChevronRight, Cpu } from "lucide-react";
+import { TelegramCard } from "@/components/telegram-card";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/format";
