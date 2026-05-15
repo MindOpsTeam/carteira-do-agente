@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
   void user;
   const { data: instance } = await supabase
     .from("instances")
-    .select("ingress_url, hooks_token, connected_integrations")
+    .select("ingress_url, hooks_token")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -59,16 +59,15 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Instância não encontrada ou sem ingress_url/hooks_token", 422);
   }
 
-  // connected_integrations pode vir como array (legado) ou jsonb objeto { omie: true, hubspot: false }
-  let connectedIntegrations: string[] = [];
-  const ci = instance.connected_integrations;
-  if (Array.isArray(ci)) {
-    connectedIntegrations = ci.filter((x) => typeof x === "string");
-  } else if (ci && typeof ci === "object") {
-    connectedIntegrations = Object.entries(ci)
-      .filter(([, v]) => Boolean(v))
-      .map(([k]) => k);
-  }
+  // ── Sprint 39: integrações ativas vêm de integration_credentials ───────
+  const { data: creds } = await supabase
+    .from("integration_credentials")
+    .select("skill_name")
+    .eq("active", true);
+
+  const connectedIntegrations: string[] = Array.from(
+    new Set((creds ?? []).map((c) => c.skill_name).filter((s): s is string => !!s)),
+  );
 
   if (connectedIntegrations.length === 0) {
     // Sem integrações conectadas → retorna snapshot vazio (não é erro)
