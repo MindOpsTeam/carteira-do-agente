@@ -799,7 +799,13 @@ function ChatPage() {
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
-                        <span className="ml-2 text-xs">Marcos pensando...</span>
+                        <span className="ml-2 text-xs">
+                          {streamWaitMs > STREAM_WAIT_HARD_MS
+                            ? "⏱️ Demorando mais que o esperado…"
+                            : streamWaitMs > STREAM_WAIT_SOFT_MS
+                              ? "⏳ Marcos pensando…"
+                              : "Marcos pensando..."}
+                        </span>
                       </div>
                     ) : null}
                     {m.status === "error" && !m.content && (
