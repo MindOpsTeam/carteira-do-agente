@@ -84,7 +84,51 @@ Deno.serve(async (req: Request) => {
     return errorResponse(`Upstream ${upstream.status}: ${text.slice(0, 200)}`, 502);
   }
 
-  return new Response(upstream.body, {
+  // Wrap upstream stream and inject `: keepalive\n\n` SSE comments every 15s,
+  // so Cloudflare/proxies don't buffer the connection while the model is
+  // "thinking" (no chunks yet) and the browser detector sees fresh activity.
+  const encoder = new TextEncoder();
+  const KEEPALIVE_MS = 15_000;
+  const upstreamStream = upstream.body;
+  const merged = new ReadableStream<Uint8Array>({
+    start(controller) {
+      let closed = false;
+      const ka = setInterval(() => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(": keepalive\n\n"));
+        } catch {
+          /* controller already closed */
+        }
+      }, KEEPALIVE_MS);
+
+      (async () => {
+        const reader = upstreamStream.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) controller.enqueue(value);
+          }
+        } catch (err) {
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `event: error\ndata: ${JSON.stringify({ message: String(err) })}\n\n`,
+              ),
+            );
+          } catch { /* noop */ }
+        } finally {
+          closed = true;
+          clearInterval(ka);
+          try { controller.close(); } catch { /* noop */ }
+          try { reader.releaseLock(); } catch { /* noop */ }
+        }
+      })();
+    },
+  });
+
+  return new Response(merged, {
     status: 200,
     headers: {
       ...corsHeaders,
