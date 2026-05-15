@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare, MessageCircle, Sparkles, BarChart3, Target, Zap, Activity, Bell } from "lucide-react";
+import { LayoutDashboard, MonitorSmartphone, ScrollText, DollarSign, ShieldCheck, Settings, Briefcase, Plug, MessageSquare, Sparkles, BarChart3, Target, Zap, Activity, Bell } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
