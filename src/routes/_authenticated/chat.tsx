@@ -36,21 +36,16 @@ type ChatRow = {
 };
 
 type ChannelOption = {
-  id: string;            // unique key, ex "panel" or "wa:principal"
-  label: string;         // user-facing
-  threadId: string;      // panel:<uid>  or  wa:<instance_name>:<phone>
-  kind: "panel" | "whatsapp";
-  phone?: string | null;
+  id: string;
+  label: string;
+  threadId: string;
+  kind: "panel";
 };
 
 type ConnState = "idle" | "checking" | "online" | "offline" | "error";
 
 const HISTORY_LIMIT = 50;
 const MAX_SSE_FAILURES = 3;
-const SYSTEM_PROMPT =
-  "Você é Marcos, CFO virtual do usuário. Responde em português, conciso e direto. " +
-  "Tem acesso a integrações (HubSpot, Asaas, Supabase, etc) e pode executar ações via tools. " +
-  "Sempre confirme antes de qualquer ação destrutiva ou financeira.";
 const STREAM_FLUSH_MS = 150;
 // Granular SSE health thresholds (ms since last chunk)
 const STREAM_WAIT_SOFT_MS = 15_000;   // → "Marcos pensando…"
