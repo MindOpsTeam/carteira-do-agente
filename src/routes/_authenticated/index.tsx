@@ -687,6 +687,60 @@ function EmptyChart({ text }: { text: string }) {
   return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">{text}</div>;
 }
 
+function DaemonsHealthCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["dashboard-daemons-health"],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const { data } = await supabase
+        .from("instance_metrics")
+        .select("labels,recorded_at")
+        .eq("metric_name", "daemon_heartbeat")
+        .gte("recorded_at", since)
+        .order("recorded_at", { ascending: false })
+        .limit(500);
+      const latest: Record<string, string> = {};
+      for (const r of (data ?? []) as Array<{ labels: Record<string, string> | null; recorded_at: string }>) {
+        const d = (r.labels?.daemon || "unknown") as string;
+        if (!latest[d]) latest[d] = r.recorded_at;
+      }
+      const now = Date.now();
+      const entries = Object.entries(latest).map(([daemon, last]) => ({
+        daemon,
+        ok: now - new Date(last).getTime() <= 5 * 60 * 1000,
+      }));
+      return { total: entries.length, ok: entries.filter((e) => e.ok).length };
+    },
+    refetchInterval: 60 * 1000,
+    staleTime: 30 * 1000,
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Activity className="h-4 w-4" /> Saúde dos daemons
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : data && data.total > 0 ? (
+          <div className="text-2xl font-semibold tabular-nums font-mono">
+            <span className={data.ok === data.total ? "text-emerald-500" : "text-amber-500"}>{data.ok}</span>
+            <span className="text-muted-foreground"> / {data.total} OK</span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Sem heartbeats recentes</p>
+        )}
+        <Link to="/observability" className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+          Ver tudo <ExternalLink className="h-3 w-3" />
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
 function OnboardingCTA() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
