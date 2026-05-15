@@ -28,7 +28,6 @@ import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
 import { Route as AuthenticatedAutomationsIndexRouteImport } from './routes/_authenticated/automations.index'
 import { Route as AuthenticatedSettingsWhatsappBaileysRouteImport } from './routes/_authenticated/settings_.whatsapp-baileys'
-import { Route as AuthenticatedSettingsWhatsappRouteImport } from './routes/_authenticated/settings_.whatsapp'
 import { Route as AuthenticatedSettingsSistemaRouteImport } from './routes/_authenticated/settings_.sistema'
 import { Route as AuthenticatedSettingsRulesRouteImport } from './routes/_authenticated/settings_.rules'
 import { Route as AuthenticatedIntegrationsSupabaseRouteImport } from './routes/_authenticated/integrations.supabase'
@@ -142,12 +141,6 @@ const AuthenticatedSettingsWhatsappBaileysRoute =
   AuthenticatedSettingsWhatsappBaileysRouteImport.update({
     id: '/settings_/whatsapp-baileys',
     path: '/settings/whatsapp-baileys',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedSettingsWhatsappRoute =
-  AuthenticatedSettingsWhatsappRouteImport.update({
-    id: '/settings_/whatsapp',
-    path: '/settings/whatsapp',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSettingsSistemaRoute =
@@ -266,7 +259,6 @@ export interface FileRoutesByFullPath {
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/settings/sistema': typeof AuthenticatedSettingsSistemaRoute
-  '/settings/whatsapp': typeof AuthenticatedSettingsWhatsappRoute
   '/settings/whatsapp-baileys': typeof AuthenticatedSettingsWhatsappBaileysRoute
   '/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
@@ -302,7 +294,6 @@ export interface FileRoutesByTo {
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/rules': typeof AuthenticatedSettingsRulesRoute
   '/settings/sistema': typeof AuthenticatedSettingsSistemaRoute
-  '/settings/whatsapp': typeof AuthenticatedSettingsWhatsappRoute
   '/settings/whatsapp-baileys': typeof AuthenticatedSettingsWhatsappBaileysRoute
   '/automations': typeof AuthenticatedAutomationsIndexRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
@@ -340,7 +331,6 @@ export interface FileRoutesById {
   '/_authenticated/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/_authenticated/settings_/rules': typeof AuthenticatedSettingsRulesRoute
   '/_authenticated/settings_/sistema': typeof AuthenticatedSettingsSistemaRoute
-  '/_authenticated/settings_/whatsapp': typeof AuthenticatedSettingsWhatsappRoute
   '/_authenticated/settings_/whatsapp-baileys': typeof AuthenticatedSettingsWhatsappBaileysRoute
   '/_authenticated/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
@@ -378,7 +368,6 @@ export interface FileRouteTypes {
     | '/integrations/supabase'
     | '/settings/rules'
     | '/settings/sistema'
-    | '/settings/whatsapp'
     | '/settings/whatsapp-baileys'
     | '/automations/'
     | '/instances/'
@@ -414,7 +403,6 @@ export interface FileRouteTypes {
     | '/integrations/supabase'
     | '/settings/rules'
     | '/settings/sistema'
-    | '/settings/whatsapp'
     | '/settings/whatsapp-baileys'
     | '/automations'
     | '/instances'
@@ -451,7 +439,6 @@ export interface FileRouteTypes {
     | '/_authenticated/integrations/supabase'
     | '/_authenticated/settings_/rules'
     | '/_authenticated/settings_/sistema'
-    | '/_authenticated/settings_/whatsapp'
     | '/_authenticated/settings_/whatsapp-baileys'
     | '/_authenticated/automations/'
     | '/_authenticated/instances/'
@@ -604,13 +591,6 @@ declare module '@tanstack/react-router' {
       path: '/settings/whatsapp-baileys'
       fullPath: '/settings/whatsapp-baileys'
       preLoaderRoute: typeof AuthenticatedSettingsWhatsappBaileysRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/settings_/whatsapp': {
-      id: '/_authenticated/settings_/whatsapp'
-      path: '/settings/whatsapp'
-      fullPath: '/settings/whatsapp'
-      preLoaderRoute: typeof AuthenticatedSettingsWhatsappRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings_/sistema': {
@@ -817,7 +797,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegrationsSupabaseRoute: typeof AuthenticatedIntegrationsSupabaseRoute
   AuthenticatedSettingsRulesRoute: typeof AuthenticatedSettingsRulesRoute
   AuthenticatedSettingsSistemaRoute: typeof AuthenticatedSettingsSistemaRoute
-  AuthenticatedSettingsWhatsappRoute: typeof AuthenticatedSettingsWhatsappRoute
   AuthenticatedSettingsWhatsappBaileysRoute: typeof AuthenticatedSettingsWhatsappBaileysRoute
   AuthenticatedAutomationsIndexRoute: typeof AuthenticatedAutomationsIndexRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
@@ -851,7 +830,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedIntegrationsSupabaseRoute,
   AuthenticatedSettingsRulesRoute: AuthenticatedSettingsRulesRoute,
   AuthenticatedSettingsSistemaRoute: AuthenticatedSettingsSistemaRoute,
-  AuthenticatedSettingsWhatsappRoute: AuthenticatedSettingsWhatsappRoute,
   AuthenticatedSettingsWhatsappBaileysRoute:
     AuthenticatedSettingsWhatsappBaileysRoute,
   AuthenticatedAutomationsIndexRoute: AuthenticatedAutomationsIndexRoute,
@@ -873,3 +851,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
