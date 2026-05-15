@@ -327,6 +327,30 @@ export type Database = {
         }
         Relationships: []
       }
+      instance_metrics: {
+        Row: {
+          id: number
+          labels: Json
+          metric_name: string
+          metric_value: number
+          recorded_at: string
+        }
+        Insert: {
+          id?: number
+          labels?: Json
+          metric_name: string
+          metric_value: number
+          recorded_at?: string
+        }
+        Update: {
+          id?: number
+          labels?: Json
+          metric_name?: string
+          metric_value?: number
+          recorded_at?: string
+        }
+        Relationships: []
+      }
       instances: {
         Row: {
           agente_cfo_version: string | null
