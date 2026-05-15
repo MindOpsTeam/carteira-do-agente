@@ -301,7 +301,7 @@ function AlertsPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog: open={!!confirmDelete} />
+      
       <AlertEditor
         open={dialogOpen}
         onOpenChange={setDialogOpen}
