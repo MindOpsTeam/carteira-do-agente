@@ -215,34 +215,7 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground">
-                Pareie seu WhatsApp pessoal pra conversar com Marcos. Sem servidor extra,
-                via plugin nativo do OpenClaw.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link to="/settings/whatsapp-baileys">
-                Abrir
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Telegram */}
-      <TelegramCard />
 
       {/* Sistema (avançado) */}
       <Card>
