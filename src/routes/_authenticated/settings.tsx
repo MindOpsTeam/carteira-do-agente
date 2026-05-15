@@ -216,7 +216,7 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp — Baileys nativo (recomendado) + Evolution API (alternativa) */}
+      {/* WhatsApp */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -224,41 +224,17 @@ function SettingsPage() {
             WhatsApp
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-start gap-3">
-            <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+        <CardContent>
+          <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm flex items-center gap-2">
-                Baileys nativo
-                <span className="text-[10px] font-semibold uppercase tracking-wide bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
-                  Recomendado
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Pareie seu WhatsApp pessoal direto pelo painel — sem servidor extra,
-                via plugin do OpenClaw.
+              <p className="text-sm text-muted-foreground">
+                Pareie seu WhatsApp pessoal pra conversar com Marcos. Sem servidor extra,
+                via plugin nativo do OpenClaw.
               </p>
             </div>
-            <Button asChild variant="default" size="sm">
+            <Button asChild size="sm">
               <Link to="/settings/whatsapp-baileys">
-                Parear
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="rounded-lg border p-3 flex items-start gap-3">
-            <MessageCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">Evolution API</div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Alternativa para múltiplas linhas, bots ou setups com servidor Evolution
-                já existente.
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/settings/whatsapp">
-                Gerenciar
+                Abrir
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>
