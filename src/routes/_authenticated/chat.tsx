@@ -122,6 +122,8 @@ function ChatPage() {
   const [activeChannelId, setActiveChannelId] = useState<string>("panel");
   const [conn, setConn] = useState<ConnState>("idle");
   const [streaming, setStreaming] = useState(false);
+  // ms since last SSE chunk for the active stream — drives "pensando…" / "demorando…" hint
+  const [streamWaitMs, setStreamWaitMs] = useState(0);
   // tool calls per assistant-message id (for inline pills)
   type ToolPill = { id: string; name: string; startedAt: number; finishedAt?: number };
   const [toolPills, setToolPills] = useState<Record<string | number, ToolPill[]>>({});
