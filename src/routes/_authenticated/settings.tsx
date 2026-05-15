@@ -237,6 +237,9 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Telegram */}
+      <TelegramCard />
+
       {/* Sistema (avançado) */}
       <Card>
         <CardHeader>
