@@ -744,6 +744,85 @@ function DaemonsHealthCard() {
   );
 }
 
+function CostBudgetCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["dashboard-cost-budget"],
+    queryFn: async () => {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const [metricsRes, alertsRes] = await Promise.all([
+        supabase
+          .from("instance_metrics")
+          .select("metric_value,labels")
+          .in("metric_name", ["anthropic_cost_brl", "llm_cost_brl"])
+          .gte("recorded_at", startOfMonth.toISOString())
+          .limit(5000),
+        supabase
+          .from("alerts_config")
+          .select("condition")
+          .eq("type", "cost_anthropic")
+          .eq("active", true)
+          .order("created_at", { ascending: false })
+          .limit(1),
+      ]);
+      const rows = (metricsRes.data ?? []) as Array<{ metric_value: number; labels: Record<string, string> | null }>;
+      const spent = rows
+        .filter((r) => {
+          const provider = r.labels?.provider;
+          return !provider || provider === "anthropic";
+        })
+        .reduce((s, r) => s + (Number(r.metric_value) || 0), 0);
+      const budget = Number(
+        ((alertsRes.data?.[0]?.condition as { threshold_brl?: number })?.threshold_brl) ?? 0,
+      );
+      return { spent, budget };
+    },
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+  });
+
+  const spent = data?.spent ?? 0;
+  const budget = data?.budget ?? 0;
+  const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
+  const color = pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500";
+  const textColor = pct >= 90 ? "text-destructive" : pct >= 70 ? "text-amber-500" : "text-emerald-500";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Wallet className="h-4 w-4" /> Custo Anthropic — mês
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {isLoading ? (
+          <Skeleton className="h-8 w-32" />
+        ) : budget > 0 ? (
+          <>
+            <div className="text-sm font-mono tabular-nums">
+              <span className={`font-semibold ${textColor}`}>{formatCurrencyBRL(spent)}</span>
+              <span className="text-muted-foreground"> / {formatCurrencyBRL(budget)}</span>
+            </div>
+            <div className="h-2 w-full bg-muted rounded overflow-hidden">
+              <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+            </div>
+            <p className="text-xs text-muted-foreground font-mono">{pct.toFixed(0)}% do orçamento</p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">Sem orçamento configurado</p>
+            <Link to="/alerts" className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+              Configurar alerta de custo →
+            </Link>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function OnboardingCTA() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
