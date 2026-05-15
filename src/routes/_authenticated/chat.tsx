@@ -771,12 +771,6 @@ function ChatPage() {
                     {m.status === "error" && !m.content && (
                       <div className="text-xs text-destructive">Falha ao receber resposta</div>
                     )}
-                    {m.channel && m.channel !== "panel" && (
-                      <div className="mt-1 text-[10px] opacity-60 inline-flex items-center gap-1">
-                        <MessageCircle className="h-2.5 w-2.5" />
-                        via {m.channel.startsWith("whatsapp") ? "WhatsApp" : m.channel}
-                      </div>
-                    )}
                   </div>
                 </div>
               );
