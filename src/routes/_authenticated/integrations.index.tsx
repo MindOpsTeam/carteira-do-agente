@@ -140,14 +140,6 @@ function IntegrationsIndex() {
       .eq("active", true)
       .limit(1);
     setSupabaseConnected((spList?.length ?? 0) > 0);
-
-    // 4. WhatsApp instances
-    const { data: waList } = await supabase
-      .from("whatsapp_instances")
-      .select("id, status, receives_marcos_chat");
-    const connected = (waList ?? []).filter((w) => w.status === "connected");
-    setWaConnected(connected.length);
-    setWaReceivers(connected.filter((w) => w.receives_marcos_chat).length);
   }
 
   useEffect(() => {
