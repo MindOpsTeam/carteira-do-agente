@@ -177,28 +177,6 @@ verify_jwt = false
 [functions.vps-admin-action]
 verify_jwt = true
 
-# Sprint 38 — Telegram bots (CRUD + webhook)
-[functions.telegram-bots-list]
-verify_jwt = true
-
-[functions.telegram-bots-save]
-verify_jwt = true
-
-[functions.telegram-bots-delete]
-verify_jwt = true
-
-[functions.telegram-bots-test]
-verify_jwt = true
-
-[functions.telegram-bots-vps-list]
-verify_jwt = false
-
-[functions.telegram-bots-vps-update]
-verify_jwt = false
-
-[functions.telegram-incoming-webhook]
-verify_jwt = false
-
 # Sprint 43 — Alerts CRUD
 [functions.alerts-list]
 verify_jwt = true
