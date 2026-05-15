@@ -359,45 +359,47 @@ function AlertEditor({
   const [latMs, setLatMs] = useState(2000);
   const [latWindow, setLatWindow] = useState(5);
 
-  // hydrate when editing
-  const lastEditingId = (editing?.id ?? "") + "|" + String(open);
-  useState(() => lastEditingId);
-  if (open && editing && name === "" && editing.name) {
-    // first-render hydration
-    setName(editing.name);
-    setType(editing.type);
-    setCooldown(editing.cooldown_min);
-    setActive(editing.active);
-    setChannels({
-      panel: editing.channels.includes("panel"),
-      whatsapp: editing.channels.includes("whatsapp"),
-      telegram: editing.channels.includes("telegram"),
-    });
-    const c = editing.condition as Record<string, unknown>;
-    if (editing.type === "cost_anthropic") setCostThreshold(Number(c.threshold_brl ?? 50));
-    if (editing.type === "daemon_down") {
-      setDaemon(String(c.daemon ?? DAEMON_OPTIONS[0]));
-      setDaemonMin(Number(c.threshold_min ?? 5));
+  // hydrate when opening (run only on open changes)
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      setName(editing.name);
+      setType(editing.type);
+      setCooldown(editing.cooldown_min);
+      setActive(editing.active);
+      setChannels({
+        panel: editing.channels.includes("panel"),
+        whatsapp: editing.channels.includes("whatsapp"),
+        telegram: editing.channels.includes("telegram"),
+      });
+      const c = editing.condition as Record<string, unknown>;
+      if (editing.type === "cost_anthropic") setCostThreshold(Number(c.threshold_brl ?? 50));
+      if (editing.type === "daemon_down") {
+        setDaemon(String(c.daemon ?? DAEMON_OPTIONS[0]));
+        setDaemonMin(Number(c.threshold_min ?? 5));
+      }
+      if (editing.type === "tool_errors") {
+        setSkill(String(c.skill ?? SKILL_OPTIONS[0]));
+        setTool(String(c.tool ?? ""));
+        setErrCount(Number(c.threshold_count ?? 3));
+        setErrWindow(Number(c.window_min ?? 5));
+      }
+      if (editing.type === "latency_high") {
+        setSkill(String(c.skill ?? SKILL_OPTIONS[0]));
+        setLatMs(Number(c.threshold_ms ?? 2000));
+        setLatWindow(Number(c.window_min ?? 5));
+      }
+    } else {
+      setName("");
+      setType("cost_anthropic");
+      setCooldown(30);
+      setActive(true);
+      setChannels({ panel: true, whatsapp: false, telegram: false });
+      setCostThreshold(50);
+      setTool("");
     }
-    if (editing.type === "tool_errors") {
-      setSkill(String(c.skill ?? SKILL_OPTIONS[0]));
-      setTool(String(c.tool ?? ""));
-      setErrCount(Number(c.threshold_count ?? 3));
-      setErrWindow(Number(c.window_min ?? 5));
-    }
-    if (editing.type === "latency_high") {
-      setSkill(String(c.skill ?? SKILL_OPTIONS[0]));
-      setLatMs(Number(c.threshold_ms ?? 2000));
-      setLatWindow(Number(c.window_min ?? 5));
-    }
-  }
-  if (!open && name !== "") {
-    setName("");
-    setType("cost_anthropic");
-    setCooldown(30);
-    setActive(true);
-    setChannels({ panel: true, whatsapp: false, telegram: false });
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
 
   const buildCondition = (): Record<string, unknown> | null => {
     switch (type) {
