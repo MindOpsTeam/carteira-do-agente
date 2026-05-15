@@ -10,7 +10,6 @@
 
 import { adminClient, corsHeaders, errorResponse } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getMarcosContext } from "../_shared/marcos-context.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
