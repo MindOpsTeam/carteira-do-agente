@@ -12,6 +12,7 @@
  * }
  */
 import { adminClient, corsHeaders, errorResponse, jsonResponse } from "../_shared/auth.ts";
+import { getMarcosContext } from "../_shared/marcos-context.ts";
 
 type Body = {
   channel?: string;
@@ -131,13 +132,18 @@ Deno.serve(async (req: Request) => {
     : "";
 
   const runId = `inc_${Date.now()}_${userMsg.id}`;
-  const promptMsg = `[INCOMING_MESSAGE]
+
+  // Sprint 53 — system prompt unificado vindo da VPS (cache 5min, fallback inline).
+  const marcosCtx = await getMarcosContext().catch(() => null);
+  const systemBlock = marcosCtx?.system_prompt
+    ? `[SYSTEM]\n${marcosCtx.system_prompt}\n\n`
+    : "";
+
+  const promptMsg = `${systemBlock}[INCOMING_MESSAGE]
 Canal: ${channelLabel}
 Phone/Chat: ${externalId}
 Usuário: ${text}
 ${contextBlock}
-Você é Marcos, CFO virtual. Responda em português, claro e sem rodeios. Use ferramentas (bash, scripts, MCP servers) se precisar consultar dados reais.
-
 IMPORTANTE — ao terminar, responda via:
   bash $HOME/.openclaw/workspace/skills/agente-cfo/scripts/panel_post_reply.sh "${channel}" "${externalId}" "${threadId}" "${runId}" "<sua resposta>"
 
