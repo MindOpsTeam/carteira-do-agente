@@ -12,7 +12,6 @@
  * }
  */
 import { adminClient, corsHeaders, errorResponse, jsonResponse } from "../_shared/auth.ts";
-import { getMarcosContext } from "../_shared/marcos-context.ts";
 
 type Body = {
   channel?: string;
