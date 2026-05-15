@@ -636,10 +636,9 @@ function ChatPage() {
     conn === "error" ? "erro de conexão" :
     "—";
 
-  const inputDisabled = streaming || conn === "offline" || !isPanelChannel;
-  const inputPlaceholder = !isPanelChannel
-    ? `Leitura apenas — envie pelo WhatsApp ${activeChannel?.phone ?? ""}`
-    : conn === "online" ? "Pergunte algo ao Marcos..." :
+  const inputDisabled = streaming || conn === "offline";
+  const inputPlaceholder =
+    conn === "online" ? "Pergunte algo ao Marcos..." :
     conn === "checking" ? "Conectando..." :
     conn === "offline" ? "Marcos está offline — verifique em /settings" :
     "Pergunte algo ao Marcos...";
