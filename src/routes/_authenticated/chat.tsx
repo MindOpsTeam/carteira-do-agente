@@ -271,9 +271,8 @@ function ChatPage() {
       } catch {
         // ignore — we'll fall through and surface the 401 below
       }
-      let { data: sess } = await supabase.auth.getSession();
-      let accessToken = sess.session?.access_token;
-      if (!accessToken) {
+      const { data: sess0 } = await supabase.auth.getSession();
+      if (!sess0.session?.access_token) {
         toast.error("Sessão expirada — faça login de novo");
         return false;
       }
@@ -291,7 +290,7 @@ function ChatPage() {
       trackId(userRow.id);
       upsertMessage(userRow as ChatRow);
 
-      // 2. insert placeholder assistant message
+      // 2. insert placeholder assistant message (reused across retries)
       const { data: asstRow, error: asstErr } = await supabase
         .from("chat_messages")
         .insert({ thread_id: threadId, role: "marcos", content: "", status: "streaming" })
@@ -316,212 +315,257 @@ function ChatPage() {
         { role: "user", content },
       ];
 
+      // Single SSE attempt. Returns:
+      //   "ok"      — got [DONE] or stream ended cleanly
+      //   "timeout" — no chunk for STREAM_TIMEOUT_MS, eligible for retry
+      //   "neterr"  — network/HTTP error, eligible for retry
+      //   "fatal"   — auth, 503, user abort — do not retry
+      type Outcome = "ok" | "timeout" | "neterr" | "fatal";
+      const runAttempt = async (): Promise<Outcome> => {
+        const { data: sess } = await supabase.auth.getSession();
+        let accessToken = sess.session?.access_token ?? "";
+        if (!accessToken) return "fatal";
+
+        let buffer = "";
+        let lastFlush = Date.now();
+        let lastChunk = Date.now();
+        let timedOut = false;
+        const ctrl = new AbortController();
+        abortRef.current = ctrl;
+        setStreamWaitMs(0);
+
+        const toolsByIdx = new Map<number, ToolPill>();
+        const flushPills = () => {
+          setToolPills((prev) => ({ ...prev, [asstId]: Array.from(toolsByIdx.values()) }));
+        };
+
+        const timeoutTimer = window.setInterval(() => {
+          const elapsed = Date.now() - lastChunk;
+          setStreamWaitMs(elapsed);
+          if (elapsed > STREAM_TIMEOUT_MS) {
+            timedOut = true;
+            ctrl.abort();
+          }
+        }, STREAM_TICK_MS);
+
+        const flushToDb = async (final = false, errMsg?: string) => {
+          try {
+            await supabase
+              .from("chat_messages")
+              .update({
+                content: errMsg
+                  ? (buffer ? `${buffer}\n\n_${errMsg}_` : errMsg)
+                  : buffer,
+                status: final ? (errMsg ? "error" : "sent") : "streaming",
+              })
+              .eq("id", asstId);
+          } catch {
+            // ignore transient
+          }
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === asstId
+                ? {
+                    ...m,
+                    content: errMsg
+                      ? (buffer ? `${buffer}\n\n_${errMsg}_` : errMsg)
+                      : buffer,
+                    status: final ? (errMsg ? "error" : "sent") : "streaming",
+                  }
+                : m,
+            ),
+          );
+          lastFlush = Date.now();
+        };
+
+        const doFetch = async (token: string) => {
+          const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
+          const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+          return fetch(`${supaUrl}/functions/v1/chat-stream`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              apikey,
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify({
+              messages: payloadMessages,
+              max_tokens: 2048,
+            }),
+            signal: ctrl.signal,
+          });
+        };
+
+        const cleanup = () => {
+          window.clearInterval(timeoutTimer);
+          setStreamWaitMs(0);
+          abortRef.current = null;
+        };
+
+        try {
+          let res = await doFetch(accessToken);
+
+          if (res.status === 401) {
+            try {
+              await supabase.auth.refreshSession();
+            } catch { /* fallthrough */ }
+            const retry = await supabase.auth.getSession();
+            accessToken = retry.data.session?.access_token ?? "";
+            if (accessToken) res = await doFetch(accessToken);
+            if (res.status === 401) {
+              await flushToDb(true, "Sessão expirou — entre de novo");
+              cleanup();
+              return "fatal";
+            }
+          }
+          if (res.status === 503) {
+            const t = await res.text().catch(() => "");
+            await flushToDb(true, t || "Marcos offline");
+            cleanup();
+            return "fatal";
+          }
+          if (res.status === 404) {
+            await flushToDb(true, "Modo streaming desabilitado na VPS");
+            cleanup();
+            return "fatal";
+          }
+          if (!res.ok || !res.body) {
+            cleanup();
+            return "neterr";
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let pending = "";
+
+          // eslint-disable-next-line no-constant-condition
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            // any byte from upstream (incl. `: keepalive`) keeps the watchdog happy
+            lastChunk = Date.now();
+            setStreamWaitMs(0);
+            pending += decoder.decode(value, { stream: true });
+            const lines = pending.split("\n");
+            pending = lines.pop() ?? "";
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const payload = trimmed.slice(5).trim();
+              if (payload === "[DONE]") {
+                const now = Date.now();
+                toolsByIdx.forEach((p) => { if (!p.finishedAt) p.finishedAt = now; });
+                flushPills();
+                await flushToDb(true);
+                cleanup();
+                sseFailuresRef.current = 0;
+                return "ok";
+              }
+              try {
+                const json = JSON.parse(payload);
+                const delta = json.choices?.[0]?.delta;
+                const textDelta: string = delta?.content ?? "";
+                if (textDelta) {
+                  const now = Date.now();
+                  let pillsChanged = false;
+                  toolsByIdx.forEach((p) => {
+                    if (!p.finishedAt) { p.finishedAt = now; pillsChanged = true; }
+                  });
+                  if (pillsChanged) flushPills();
+                  buffer += textDelta;
+                  if (Date.now() - lastFlush > STREAM_FLUSH_MS) {
+                    await flushToDb(false);
+                  }
+                }
+                const toolDeltas = delta?.tool_calls;
+                if (Array.isArray(toolDeltas)) {
+                  let pillsChanged = false;
+                  for (const td of toolDeltas) {
+                    const idx = typeof td.index === "number" ? td.index : 0;
+                    const existing = toolsByIdx.get(idx);
+                    const fnName = td.function?.name;
+                    if (!existing) {
+                      toolsByIdx.set(idx, {
+                        id: td.id ?? `tool-${idx}`,
+                        name: fnName ?? "",
+                        startedAt: Date.now(),
+                      });
+                      pillsChanged = true;
+                    } else if (fnName && !existing.name) {
+                      existing.name = fnName;
+                      pillsChanged = true;
+                    }
+                  }
+                  if (pillsChanged) flushPills();
+                }
+              } catch {
+                // ignore non-JSON keepalives
+              }
+            }
+          }
+          // stream ended without [DONE]
+          const now = Date.now();
+          toolsByIdx.forEach((p) => { if (!p.finishedAt) p.finishedAt = now; });
+          flushPills();
+          await flushToDb(true);
+          cleanup();
+          sseFailuresRef.current = 0;
+          return "ok";
+        } catch (err) {
+          cleanup();
+          const aborted = (err as Error)?.name === "AbortError";
+          if (aborted && timedOut) return "timeout";
+          if (aborted) {
+            await flushToDb(true, "Cancelado pelo usuário");
+            return "fatal";
+          }
+          return "neterr";
+        }
+      };
+
       setStreaming(true);
       beginChatStream();
-      let buffer = "";
-      let lastFlush = Date.now();
-      let lastChunk = Date.now();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-
-      // tool-call accumulator: index → { id, name, startedAt }
-      const toolsByIdx = new Map<number, ToolPill>();
-      const flushPills = () => {
-        const list = Array.from(toolsByIdx.values());
-        setToolPills((prev) => ({ ...prev, [asstId]: list }));
-      };
-
-      // timeout watcher
-      const timeoutTimer = window.setInterval(() => {
-        if (Date.now() - lastChunk > STREAM_TIMEOUT_MS) {
-          ctrl.abort();
-        }
-      }, 10_000);
-
-      const flushToDb = async (final = false, errMsg?: string) => {
-        try {
-          await supabase
-            .from("chat_messages")
-            .update({
-              content: errMsg ? `${buffer}\n\n_Erro: ${errMsg}_` : buffer,
-              status: final ? (errMsg ? "error" : "sent") : "streaming",
-            })
-            .eq("id", asstId);
-        } catch {
-          // ignore transient
-        }
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === asstId
-              ? {
-                  ...m,
-                  content: errMsg ? `${buffer}\n\n_Erro: ${errMsg}_` : buffer,
-                  status: final ? (errMsg ? "error" : "sent") : "streaming",
-                }
-              : m,
-          ),
-        );
-        lastFlush = Date.now();
-      };
-
-      const doFetch = async (token: string) => {
-        const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
-        const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-        return fetch(`${supaUrl}/functions/v1/chat-stream`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            apikey,
-            "Content-Type": "application/json",
-            Accept: "text/event-stream",
-          },
-          body: JSON.stringify({
-            messages: payloadMessages,
-            max_tokens: 2048,
-          }),
-          signal: ctrl.signal,
-        });
-      };
-
       try {
-        let res = await doFetch(accessToken);
+        let outcome = await runAttempt();
 
-        // 401 mid-flight: try a fresh refresh once. Never auto-logout.
-        if (res.status === 401) {
+        // Auto-retry exactly once on timeout / network error.
+        if (outcome === "timeout" || outcome === "neterr") {
+          toast.warning(
+            outcome === "timeout"
+              ? "Marcos demorou demais — reconectando…"
+              : "Conexão caiu — tentando de novo…",
+          );
+          // brief pause to let any half-open connection settle
+          await new Promise((r) => setTimeout(r, 800));
+          outcome = await runAttempt();
+        }
+
+        if (outcome === "timeout" || outcome === "neterr") {
+          // give up — persist a clear error on the same placeholder
+          const msg =
+            outcome === "timeout"
+              ? "Conexão expirou após 45s sem resposta — reenvie a mensagem"
+              : "Falha de conexão com Marcos — reenvie a mensagem";
           try {
-            await supabase.auth.refreshSession();
-          } catch {
-            // fall through
-          }
-          const retry = await supabase.auth.getSession();
-          accessToken = retry.data.session?.access_token ?? "";
-          if (accessToken) {
-            res = await doFetch(accessToken);
-          }
-          if (res.status === 401) {
-            throw new Error(
-              "Sua sessão expirou — clique em Sair no canto superior e entre de novo",
-            );
-          }
-        }
-        if (res.status === 503) {
-          const t = await res.text().catch(() => "");
-          throw new Error(t || "Marcos offline");
-        }
-        if (res.status === 404) {
-          throw new Error("Modo streaming desabilitado na VPS. Pedir admin ativar.");
-        }
-
-        if (!res.ok || !res.body) {
-          throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => "")}`);
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let pending = "";
-
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          pending += decoder.decode(value, { stream: true });
-          const lines = pending.split("\n");
-          pending = lines.pop() ?? "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith("data:")) continue;
-            const payload = trimmed.slice(5).trim();
-            if (payload === "[DONE]") {
-              // mark any still-open tool as finished
-              const now = Date.now();
-              toolsByIdx.forEach((p) => {
-                if (!p.finishedAt) p.finishedAt = now;
-              });
-              flushPills();
-              await flushToDb(true);
-              window.clearInterval(timeoutTimer);
-              setStreaming(false);
-              endChatStream();
-              abortRef.current = null;
-              sseFailuresRef.current = 0;
-              return true;
-            }
-            try {
-              const json = JSON.parse(payload);
-              const delta = json.choices?.[0]?.delta;
-              const textDelta: string = delta?.content ?? "";
-              if (textDelta) {
-                // first content chunk after a tool means the tool finished
-                const now = Date.now();
-                let pillsChanged = false;
-                toolsByIdx.forEach((p) => {
-                  if (!p.finishedAt) {
-                    p.finishedAt = now;
-                    pillsChanged = true;
-                  }
-                });
-                if (pillsChanged) flushPills();
-                buffer += textDelta;
-                lastChunk = Date.now();
-                if (Date.now() - lastFlush > STREAM_FLUSH_MS) {
-                  await flushToDb(false);
-                }
-              }
-              // tool_calls deltas (OpenAI streaming format: array w/ index)
-              const toolDeltas = delta?.tool_calls;
-              if (Array.isArray(toolDeltas)) {
-                let pillsChanged = false;
-                for (const td of toolDeltas) {
-                  const idx = typeof td.index === "number" ? td.index : 0;
-                  const existing = toolsByIdx.get(idx);
-                  const fnName = td.function?.name;
-                  if (!existing) {
-                    toolsByIdx.set(idx, {
-                      id: td.id ?? `tool-${idx}`,
-                      name: fnName ?? "",
-                      startedAt: Date.now(),
-                    });
-                    pillsChanged = true;
-                  } else if (fnName && !existing.name) {
-                    existing.name = fnName;
-                    pillsChanged = true;
-                  }
-                }
-                lastChunk = Date.now();
-                if (pillsChanged) flushPills();
-              }
-            } catch {
-              // ignore non-JSON keepalives
-            }
-          }
-        }
-        // stream ended without [DONE]
-        const now = Date.now();
-        toolsByIdx.forEach((p) => {
-          if (!p.finishedAt) p.finishedAt = now;
-        });
-        flushPills();
-        await flushToDb(true);
-        window.clearInterval(timeoutTimer);
-        setStreaming(false);
-        endChatStream();
-        abortRef.current = null;
-        sseFailuresRef.current = 0;
-        return true;
-      } catch (err) {
-        window.clearInterval(timeoutTimer);
-        setStreaming(false);
-        endChatStream();
-        abortRef.current = null;
-        const aborted = (err as Error)?.name === "AbortError";
-        const errMsg = aborted ? "Cancelado pelo usuário" : (err as Error)?.message ?? String(err);
-        await flushToDb(true, errMsg);
-        if (!aborted) {
+            await supabase
+              .from("chat_messages")
+              .update({ content: msg, status: "error" })
+              .eq("id", asstId);
+          } catch { /* noop */ }
+          setMessages((prev) =>
+            prev.map((m) => (m.id === asstId ? { ...m, content: msg, status: "error" } : m)),
+          );
           sseFailuresRef.current += 1;
-          toast.error(errMsg);
+          toast.error(msg);
+          return false;
         }
-        return aborted ? true : false;
+
+        return outcome === "ok";
+      } finally {
+        setStreaming(false);
+        endChatStream();
       }
     },
     [threadId, messages],
