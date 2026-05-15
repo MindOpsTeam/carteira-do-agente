@@ -199,3 +199,11 @@ verify_jwt = true
 # Sprint 31 — Chat SSE proxy (browser → edge → tunnel)
 [functions.chat-stream]
 verify_jwt = true
+
+# Sprint 35 — Unified incoming message entry (WhatsApp + Telegram webhooks)
+[functions.incoming-message]
+verify_jwt = false
+
+# Sprint 37 — VPS admin actions (zero SSH)
+[functions.vps-admin-action]
+verify_jwt = true

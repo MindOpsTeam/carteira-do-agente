@@ -577,6 +577,51 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_bots: {
+        Row: {
+          active: boolean
+          bot_name: string
+          bot_token_encrypted: string
+          bot_username: string
+          created_at: string
+          id: string
+          last_test_at: string | null
+          last_test_detail: string | null
+          last_test_status: string | null
+          receives_marcos_chat: boolean
+          updated_at: string
+          webhook_secret: string
+        }
+        Insert: {
+          active?: boolean
+          bot_name: string
+          bot_token_encrypted: string
+          bot_username: string
+          created_at?: string
+          id?: string
+          last_test_at?: string | null
+          last_test_detail?: string | null
+          last_test_status?: string | null
+          receives_marcos_chat?: boolean
+          updated_at?: string
+          webhook_secret: string
+        }
+        Update: {
+          active?: boolean
+          bot_name?: string
+          bot_token_encrypted?: string
+          bot_username?: string
+          created_at?: string
+          id?: string
+          last_test_at?: string | null
+          last_test_detail?: string | null
+          last_test_status?: string | null
+          receives_marcos_chat?: boolean
+          updated_at?: string
+          webhook_secret?: string
+        }
+        Relationships: []
+      }
       user_onboarding: {
         Row: {
           completed_at: string | null
