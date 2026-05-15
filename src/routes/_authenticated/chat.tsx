@@ -286,11 +286,9 @@ function ChatPage() {
         role: m.role === "marcos" ? "assistant" : m.role === "user" ? "user" : "system",
         content: m.content,
       }));
-      const payloadMessages = [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...recent,
-        { role: "user", content },
-      ];
+      // No system prompt injection — Marcos persona vem do skill agente-cfo
+      // carregado dentro do OpenClaw na VPS.
+      const payloadMessages = [...recent, { role: "user", content }];
 
       // Single SSE attempt. Returns:
       //   "ok"      — got [DONE] or stream ended cleanly
