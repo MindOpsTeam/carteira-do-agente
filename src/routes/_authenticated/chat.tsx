@@ -685,21 +685,7 @@ function ChatPage() {
         </div>
       </div>
 
-      {/* Channel selector */}
-      {channels.length > 1 && (
-        <div className="pt-3">
-          <Tabs value={activeChannelId} onValueChange={setActiveChannelId}>
-            <TabsList className="h-9">
-              {channels.map((c) => (
-                <TabsTrigger key={c.id} value={c.id} className="text-xs gap-1.5">
-                  {c.kind === "whatsapp" ? <MessageCircle className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                  {c.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-      )}
+      {/* Channel selector removed — only panel channel exists */}
 
       {/* Body */}
       <ScrollArea className="flex-1 my-3">
