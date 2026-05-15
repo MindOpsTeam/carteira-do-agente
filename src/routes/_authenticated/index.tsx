@@ -591,7 +591,10 @@ function ComandoCentral() {
               )}
             </CardContent>
           </Card>
-          <DaemonsHealthCard />
+          <div className="space-y-4">
+            <DaemonsHealthCard />
+            <CostBudgetCard />
+          </div>
         </div>
       </div>
 
