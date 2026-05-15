@@ -565,31 +565,34 @@ function ComandoCentral() {
           </CardContent>
         </Card>
 
-        {/* Saúde integrações */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Saúde das integrações</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-12 w-full" />
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {(data?.integrations_health ?? []).map((h) => (
-                  <div key={h.name} className="flex items-center gap-2 text-xs font-mono border border-border rounded px-3 py-1.5">
-                    {h.status === "ok" ? (
-                      <Wifi className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <WifiOff className="h-3.5 w-3.5 text-destructive" />
-                    )}
-                    <span className="font-medium">{h.name}</span>
-                    <span className="text-muted-foreground">{h.last_sync ? formatRelative(h.last_sync) : "—"}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Saúde integrações + daemons */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Saúde das integrações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-12 w-full" />
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {(data?.integrations_health ?? []).map((h) => (
+                    <div key={h.name} className="flex items-center gap-2 text-xs font-mono border border-border rounded px-3 py-1.5">
+                      {h.status === "ok" ? (
+                        <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <WifiOff className="h-3.5 w-3.5 text-destructive" />
+                      )}
+                      <span className="font-medium">{h.name}</span>
+                      <span className="text-muted-foreground">{h.last_sync ? formatRelative(h.last_sync) : "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <DaemonsHealthCard />
+        </div>
       </div>
 
       {needsOnboarding === "incomplete" && (
