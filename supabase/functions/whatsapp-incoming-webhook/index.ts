@@ -1,8 +1,7 @@
 /**
- * POST /whatsapp-incoming-webhook
- * Auth: header X-Webhook-Secret == evolution_config.webhook_secret
- * Recebe payload da Evolution API. Para mensagens entrantes em instâncias com
- * receives_marcos_chat=true, salva chat_messages e dispara /hooks/agent.
+ * POST /whatsapp-incoming-webhook (thin wrapper — Sprint 35)
+ * Recebe payload Evolution API, traduz pro formato unificado e encaminha
+ * pra /incoming-message (que valida secret + dispara Marcos).
  */
 import { adminClient, corsHeaders, errorResponse, jsonResponse } from "../_shared/auth.ts";
 
@@ -57,93 +56,28 @@ Deno.serve(async (req: Request) => {
   const text = extractText(data.message);
   if (!text.trim()) return jsonResponse({ ok: true, ignored: "no_text" });
 
-  const { data: waInstance } = await supabase
-    .from("whatsapp_instances")
-    .select("id, instance_name, display_name, receives_marcos_chat")
-    .eq("instance_name", instanceName)
-    .maybeSingle();
-  if (!waInstance) return jsonResponse({ ok: true, ignored: "unknown_instance" });
-  if (!waInstance.receives_marcos_chat) {
-    return jsonResponse({ ok: true, ignored: "instance_not_subscribed" });
+  // Forward para o entry-point unificado
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  try {
+    const fwd = await fetch(`${supabaseUrl}/functions/v1/incoming-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        channel: `whatsapp:${instanceName}`,
+        external_id: phone,
+        text,
+        secret: cfg.webhook_secret,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const json = await fwd.json().catch(() => ({}));
+    return jsonResponse({ ok: true, forwarded: json });
+  } catch (err) {
+    console.error("forward to incoming-message failed:", err);
+    return errorResponse(`Forward failed: ${String(err)}`, 502);
   }
-
-  const threadId = `wa:${instanceName}:${phone}`;
-
-  const { data: userMsg, error: userMsgErr } = await supabase
-    .from("chat_messages")
-    .insert({ thread_id: threadId, role: "user", content: text, status: "sent" })
-    .select("id")
-    .single();
-  if (userMsgErr || !userMsg) return errorResponse(userMsgErr?.message ?? "insert fail", 500);
-
-  // Pega instância VPS online
-  const { data: vps } = await supabase
-    .from("instances")
-    .select("id, ingress_url, hooks_token")
-    .not("ingress_url", "is", null)
-    .not("hooks_token", "is", null)
-    .order("last_heartbeat", { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!vps?.ingress_url || !vps?.hooks_token) {
-    await supabase.from("chat_messages")
-      .update({ status: "error", metadata: { error: "no_vps_instance" } })
-      .eq("id", userMsg.id);
-    return jsonResponse({ ok: true, warn: "no_vps" });
-  }
-
-  const runId = `wa_${Date.now()}_${userMsg.id}`;
-  const promptMsg = `[WHATSAPP_CHAT]
-Instância: ${instanceName} (${waInstance.display_name ?? "—"})
-Telefone: ${phone}
-Mensagem: ${text}
-
-Você é Marcos, CFO virtual. Responda em português, claro e sem rodeios. Use ferramentas (bash, scripts) se precisar consultar dados reais.
-
-IMPORTANTE — ao terminar, ENVIE sua resposta pelo WhatsApp executando:
-  bash $HOME/.openclaw/workspace/skills/evolution-api/scripts/send_evolution.sh "${instanceName}" "${phone}" "<sua resposta aqui>"
-
-Substitua <sua resposta aqui> pela mensagem final (use aspas duplas e escape com \\" se houver aspas no texto). Não responda no painel — apenas no WhatsApp.
-
-Também grave a resposta no painel para histórico:
-  bash $HOME/.openclaw/workspace/skills/agente-cfo/scripts/panel_reply.sh "${threadId}" "${runId}" "<sua resposta aqui>" "sent"`;
-
-  // Insere placeholder Marcos
-  const { data: marcosMsg } = await supabase
-    .from("chat_messages")
-    .insert({
-      thread_id: threadId,
-      role: "marcos",
-      content: "",
-      status: "pending",
-      metadata: { runId, instance: instanceName, phone },
-    })
-    .select("id")
-    .single();
-
-  // Dispara hook (fire-and-forget; não bloqueia Evolution)
-  fetch(`${vps.ingress_url}/hooks/agent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${vps.hooks_token}`,
-    },
-    body: JSON.stringify({
-      message: promptMsg,
-      name: "wa_chat",
-      wakeMode: "now",
-      deliver: false,
-      timeoutSeconds: 180,
-      metadata: { thread_id: threadId, run_id: runId, instance: instanceName, phone },
-    }),
-    signal: AbortSignal.timeout(20_000),
-  }).catch(async (err) => {
-    console.error("hook dispatch failed:", err);
-    await supabase.from("chat_messages")
-      .update({ status: "error", metadata: { error: String(err) } })
-      .eq("id", marcosMsg?.id ?? userMsg.id);
-  });
-
-  return jsonResponse({ ok: true, message_id: userMsg.id, run_id: runId });
 });
