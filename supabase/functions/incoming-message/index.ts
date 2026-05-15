@@ -132,13 +132,9 @@ Deno.serve(async (req: Request) => {
 
   const runId = `inc_${Date.now()}_${userMsg.id}`;
 
-  // Sprint 53 — system prompt unificado vindo da VPS (cache 5min, fallback inline).
-  const marcosCtx = await getMarcosContext().catch(() => null);
-  const systemBlock = marcosCtx?.system_prompt
-    ? `[SYSTEM]\n${marcosCtx.system_prompt}\n\n`
-    : "";
+  // Sem injeção de system prompt — Marcos persona vive no skill agente-cfo na VPS.
 
-  const promptMsg = `${systemBlock}[INCOMING_MESSAGE]
+  const promptMsg = `[INCOMING_MESSAGE]
 Canal: ${channelLabel}
 Phone/Chat: ${externalId}
 Usuário: ${text}
