@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Terminal, Server, HelpCircle, MessageCircle, ChevronRight } from "lucide-react";
+import { LogOut, Terminal, Server, HelpCircle, MessageCircle, ChevronRight, Cpu } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/format";
@@ -236,6 +236,26 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Sistema (avançado) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Cpu className="h-4 w-4" />
+            Sistema (avançado)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Reinicie daemons, instale plugins, veja logs e status — tudo sem SSH.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/settings/sistema">
+              Abrir painel administrativo
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
