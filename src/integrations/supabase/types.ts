@@ -435,6 +435,7 @@ export type Database = {
           openclaw_dashboard_token: string | null
           openclaw_version: string | null
           status: string
+          system_prompt: string | null
         }
         Insert: {
           agente_cfo_version?: string | null
@@ -448,6 +449,7 @@ export type Database = {
           openclaw_dashboard_token?: string | null
           openclaw_version?: string | null
           status?: string
+          system_prompt?: string | null
         }
         Update: {
           agente_cfo_version?: string | null
@@ -461,6 +463,7 @@ export type Database = {
           openclaw_dashboard_token?: string | null
           openclaw_version?: string | null
           status?: string
+          system_prompt?: string | null
         }
         Relationships: []
       }
