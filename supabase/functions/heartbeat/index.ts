@@ -31,6 +31,7 @@ Deno.serve(async (req: Request) => {
     instance_id?: string;
     openclaw_version?: string;
     ingress_url?: string;
+    system_prompt?: string;
   };
 
   try {
@@ -52,6 +53,7 @@ Deno.serve(async (req: Request) => {
 
   if (body.openclaw_version) updateData.openclaw_version = body.openclaw_version;
   if (body.ingress_url)      updateData.ingress_url = body.ingress_url;
+  if (body.system_prompt !== undefined) updateData.system_prompt = body.system_prompt;
 
   const { error } = await supabase
     .from("instances")
