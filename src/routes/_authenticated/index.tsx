@@ -51,7 +51,7 @@ import { fetchOnboardingStatus } from "@/hooks/use-onboarding";
 import type { DashboardSnapshot, Goal } from "@/types/dashboard";
 
 export const Route = createFileRoute("/_authenticated/")({
-  head: () => ({ meta: [{ title: "Comando Central — Agente CFO" }] }),
+  head: () => ({ meta: [{ title: "Painel Financeiro — Agente CFO" }] }),
   component: ComandoCentral,
 });
 
@@ -335,15 +335,16 @@ function ComandoCentral() {
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            {greeting()}.{" "}
-            <span className="text-muted-foreground font-normal">
-              {crisisMode ? `Atenção: ${criticalInsights.length} alerta${criticalInsights.length > 1 ? "s" : ""}.` : "Tudo sob controle."}
-            </span>
+            {crisisMode
+              ? `${greeting()} — ${criticalInsights.length} alerta${criticalInsights.length > 1 ? "s" : ""} crítico${criticalInsights.length > 1 ? "s" : ""} hoje.`
+              : `${greeting()}, aqui está o resumo financeiro.`}
           </h1>
-          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground font-mono">
+          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-full ${realtimeOk ? "bg-emerald-500 animate-pulse" : "bg-destructive"}`} />
-              {realtimeOk ? "REALTIME" : "OFFLINE"}
+              <span className={realtimeOk ? "text-emerald-500" : "text-destructive"}>
+                {realtimeOk ? "ao vivo" : "desconectado"}
+              </span>
             </span>
             <span>·</span>
             <span>{data ? `atualizado ${formatRelative(data.as_of)}` : "—"}</span>
