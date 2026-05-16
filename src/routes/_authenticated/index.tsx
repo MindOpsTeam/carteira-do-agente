@@ -389,6 +389,7 @@ function ComandoCentral() {
             loading={isLoading}
             insight={insightsBySection["payables"]}
             icon={<ArrowDown className="h-4 w-4 text-amber-500" />}
+            warn={!!(k && k.payables_30d_brl > k.receivables_30d_brl)}
           />
           <Kpi
             label="Pipeline ponderado"
@@ -517,9 +518,7 @@ function ComandoCentral() {
         {/* Cenário */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4" /> Cenários "E se" — simule decisões em tempo real
-            </CardTitle>
+            <CardTitle className="text-base">Simulador de decisões</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <ScenarioSlider
@@ -531,7 +530,7 @@ function ComandoCentral() {
               hint={data ? `+${formatCurrencyBRL((data.kpis.overdue_total_brl * scenario.collect) / 100)}` : "—"}
             />
             <ScenarioSlider
-              label={`Fechar ${scenario.deals} deal(s) do pipeline`}
+              label={`Fechar ${scenario.deals} venda${scenario.deals !== 1 ? "s" : ""} pendente${scenario.deals !== 1 ? "s" : ""}`}
               value={scenario.deals}
               onChange={(v) => setScenario((s) => ({ ...s, deals: v }))}
               max={10}
@@ -635,6 +634,7 @@ function Kpi({
   insight,
   override,
   icon,
+  warn,
 }: {
   label: string;
   value: number | undefined;
@@ -642,10 +642,15 @@ function Kpi({
   insight?: Insight;
   override?: number;
   icon?: React.ReactNode;
+  warn?: boolean;
 }) {
   const isCritical = insight?.severity === "critical";
   return (
-    <Card className={`relative ${isCritical ? "border-destructive/50" : ""} ${override !== undefined ? "ring-1 ring-emerald-500/60 ring-dashed" : ""}`}>
+    <Card
+      className={`relative ${isCritical ? "border-destructive/50" : ""} ${
+        warn ? "border-amber-500/40 bg-amber-500/5" : ""
+      } ${override !== undefined ? "ring-1 ring-emerald-500/60 ring-dashed" : ""}`}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
         <CardTitle className="text-xs uppercase tracking-wider font-medium text-muted-foreground">{label}</CardTitle>
         {icon}
@@ -654,7 +659,7 @@ function Kpi({
         {loading ? (
           <Skeleton className="h-8 w-32" />
         ) : (
-          <div className="text-2xl font-semibold tabular-nums font-mono">
+          <div className={`text-2xl font-semibold tabular-nums font-mono ${warn ? "text-amber-400" : ""}`}>
             {override !== undefined ? (
               <span className="text-emerald-500">{formatCurrencyBRL(override)}</span>
             ) : (
