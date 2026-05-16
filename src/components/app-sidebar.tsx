@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
-  MessageSquare,
   BarChart3,
   BarChart2,
   Target,
@@ -36,18 +35,17 @@ import {
 
 const mainItems = [
   { title: "Painel", url: "/", icon: LayoutDashboard, exact: true },
-  { title: "Conversar com Marcos", url: "/chat", icon: MessageSquare },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Metas", url: "/goals", icon: Target },
   { title: "Automações", url: "/automations", icon: Zap },
   { title: "Integrações", url: "/integrations", icon: Plug },
+  { title: "Alertas", url: "/alerts", icon: Bell },
   { title: "Configurações", url: "/settings", icon: Settings, exact: true },
 ];
 
 const adminItems = [
   { title: "Instâncias", url: "/instances", icon: Server },
   { title: "Observabilidade", url: "/observability", icon: Activity },
-  { title: "Alertas", url: "/alerts", icon: Bell },
   { title: "Eventos", url: "/events", icon: ScrollText },
   { title: "Custo LLM", url: "/llm-usage", icon: Cpu },
   { title: "Auditoria", url: "/audit", icon: ShieldCheck },
