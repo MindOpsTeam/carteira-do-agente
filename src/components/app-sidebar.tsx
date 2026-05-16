@@ -14,7 +14,7 @@ import {
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, exact: true },
   { title: "Configurar", url: "/onboarding", icon: Sparkles },
-  { title: "Conversar", url: "/chat", icon: MessageSquare },
+  
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Metas", url: "/goals", icon: Target },
   { title: "Automações", url: "/automations", icon: Zap },
