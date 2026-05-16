@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
   const supabase = adminClient();
   const { data: instance } = await supabase
     .from("instances")
-    .select("ingress_url, openclaw_dashboard_token, last_heartbeat")
+    .select("ingress_url, openclaw_dashboard_token, last_heartbeat, system_prompt")
     .order("last_heartbeat", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
