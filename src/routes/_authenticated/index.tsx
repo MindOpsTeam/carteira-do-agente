@@ -400,7 +400,40 @@ function ComandoCentral() {
           />
         </div>
 
-        {/* Gráficos linha 1 */}
+        {/* Cobranças em aberto (prioridade) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Cobranças em aberto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : data && data.top_debtors.length > 0 ? (
+              <div className="divide-y divide-border">
+                {data.top_debtors.slice(0, 5).map((d, i) => (
+                  <div key={d.id ?? i} className="flex items-center justify-between py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{d.name}</p>
+                      {d.days_overdue !== undefined && (
+                        <p className="text-xs text-muted-foreground font-mono">{d.days_overdue}d em atraso</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold tabular-nums">{formatCurrencyBRL(d.brl)}</p>
+                      <button onClick={() => navigate({ to: "/chat" })} className="text-xs text-primary hover:underline">
+                        Marcos: cobrar?
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sem inadimplentes 🎉</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gráficos */}
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader>
@@ -455,65 +488,31 @@ function ComandoCentral() {
           </Card>
         </div>
 
-        {/* Linha 2 */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Receita por canal — 30d</CardTitle>
-            </CardHeader>
-            <CardContent className="h-72">
-              {isLoading ? (
-                <Skeleton className="h-full w-full" />
-              ) : data && data.by_channel_revenue_30d.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={data.by_channel_revenue_30d} dataKey="brl" nameKey="channel" innerRadius={50} outerRadius={90} paddingAngle={2}>
-                      {data.by_channel_revenue_30d.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RTooltip content={<CurrencyTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <EmptyChart text="Sem receita registrada" />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Top devedores</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-              ) : data && data.top_debtors.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {data.top_debtors.slice(0, 5).map((d, i) => (
-                    <div key={d.id ?? i} className="flex items-center justify-between py-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{d.name}</p>
-                        {d.days_overdue !== undefined && (
-                          <p className="text-xs text-muted-foreground font-mono">{d.days_overdue}d em atraso</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold tabular-nums">{formatCurrencyBRL(d.brl)}</p>
-                        <button onClick={() => navigate({ to: "/chat" })} className="text-xs text-primary hover:underline">
-                          Marcos: cobrar?
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground py-8 text-center">Sem inadimplentes 🎉</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Receita por canal */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Receita por canal — 30d</CardTitle>
+          </CardHeader>
+          <CardContent className="h-72">
+            {isLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : data && data.by_channel_revenue_30d.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data.by_channel_revenue_30d} dataKey="brl" nameKey="channel" innerRadius={50} outerRadius={90} paddingAngle={2}>
+                    {data.by_channel_revenue_30d.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RTooltip content={<CurrencyTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart text="Sem receita registrada" />
+            )}
+          </CardContent>
+        </Card>
 
         {/* Cenário */}
         <Card>
