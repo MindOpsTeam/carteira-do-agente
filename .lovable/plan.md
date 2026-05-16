@@ -1,60 +1,31 @@
-## Objetivo
+# Refinamento UX/UI — deltas sobre o estado atual
 
-Criar apenas a **tela de login** do painel administrativo do Agente CFO, usando Supabase Auth com fluxo de **email + código OTP** (sem senha). Nenhuma outra tela, tabela ou entidade será criada agora — aguardamos as migrations SQL e instruções futuras.
+A maior parte do redesign já está aplicada do turno anterior (sidebar em dois grupos com Administração colapsável, header sem OpenClaw, dashboard com "ao vivo"/"desconectado", "venda(s) pendente(s)", título "Painel Financeiro", saudação sem emoji, tokens violet `oklch(0.68 0.22 290)`). Este plano cobre só o que ainda diverge da nova especificação.
 
-## Escopo desta entrega
+## Mudanças
 
-1. Habilitar Lovable Cloud (Supabase) no projeto.
-2. Criar a rota pública `/login` como página inicial do painel.
-3. Implementar o fluxo OTP em duas etapas dentro da mesma tela:
-   - **Etapa 1 — Email:** usuário digita o email e recebe um código de 6 dígitos.
-   - **Etapa 2 — Código:** usuário digita o código recebido para autenticar.
-4. Após autenticar com sucesso, redirecionar para `/` (placeholder simples "Autenticado" por enquanto, já que nenhuma outra tela foi definida).
-5. Tratamento de estados: loading, erro (email inválido, código incorreto/expirado), botão "reenviar código" e "trocar email".
+### 1. `src/components/app-sidebar.tsx`
+- Remover item "Conversar com Marcos" do grupo principal (não consta na nova lista).
+- Mover "Alertas" do grupo Administração para o grupo principal (entre Automações e Integrações).
+- Resto fica como está (header com BarChart2 + "Agente CFO" + "CFO Digital", grupo Administração colapsável com persistência em localStorage, ícones atuais mantidos — `Server`, `Cpu`, etc).
 
-## UX da tela
+Grupo principal final:
+Painel · Relatórios · Metas · Automações · Alertas · Integrações · Configurações
 
-- Layout centralizado, card único, identidade sóbria condizente com SaaS B2B financeiro (Agente CFO): tipografia limpa, paleta neutra com um tom de destaque, sem ilustrações.
-- Cabeçalho com nome "Agente CFO" e subtítulo "Painel administrativo".
-- Componentes shadcn já presentes: `Card`, `Input`, `Button`, `Label`, `InputOTP`, `Sonner` (toasts para erros/sucesso).
-- Mensagens em português.
+Grupo Administração final:
+Instâncias · Observabilidade · Eventos · Custo LLM · Auditoria
 
-```text
-┌─────────────────────────────┐
-│        Agente CFO           │
-│   Painel administrativo     │
-│                             │
-│  [ email@empresa.com    ]   │
-│  [   Enviar código →    ]   │
-└─────────────────────────────┘
+### 2. `src/components/app-header.tsx`
+Nada a fazer — OpenClaw e suas variáveis já foram removidas.
 
-         ↓ após envio
+### 3. `src/styles.css` — bloco `.dark`
+- `--primary-foreground`: trocar de `oklch(0.208 0.042 265.755)` para `oklch(0.98 0 0)` (branco puro, contraste com violet).
+- `--sidebar-ring`: trocar de `oklch(0.551 0.027 264.364)` para `oklch(0.68 0.22 290)`.
+- Restante dos tokens violet já está aplicado.
 
-┌─────────────────────────────┐
-│   Código enviado para       │
-│   email@empresa.com         │
-│                             │
-│   [ _ _ _ _ _ _ ]           │
-│   [    Entrar       ]       │
-│   Reenviar · Trocar email   │
-└─────────────────────────────┘
-```
+### 4. `src/routes/_authenticated/index.tsx`
+Nada a fazer — copy já está em "ao vivo"/"desconectado", "venda(s) pendente(s)", título "Painel Financeiro", saudação direta sem emoji.
 
 ## Detalhes técnicos
-
-- Frontend: TanStack Start, rota em `src/routes/login.tsx`, substituir o placeholder de `src/routes/index.tsx` por uma página mínima protegida que mostra "Autenticado como {email}" + botão de logout (apenas para validar o fluxo end-to-end; será trocada quando vierem as próximas telas).
-- Auth: cliente do browser `@/integrations/supabase/client`.
-  - Envio do código: `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })`.
-  - Verificação: `supabase.auth.verifyOtp({ email, token, type: 'email' })`.
-  - Sessão observada via `onAuthStateChange` em um provider leve (`AuthProvider`) que expõe `user` e `signOut`.
-- Guarda de rota: layout pathless `src/routes/_authenticated.tsx` com `beforeLoad` checando `supabase.auth.getUser()`; se não autenticado, `redirect({ to: '/login' })`. A home `/` passa a viver em `src/routes/_authenticated/index.tsx`.
-- Sem tabela `profiles`, sem `user_roles`, sem schema customizado nesta etapa — apenas `auth.users` nativo do Supabase.
-- Sem RLS / migrations agora; serão adicionadas quando o schema chegar.
-
-## Fora de escopo (aguardando instruções)
-
-- Multi-tenant (organizações, membros, convites).
-- Tabelas de domínio do CFO (clientes, transações, etc.).
-- Telas internas do painel (dashboard, listagens, settings).
-- Roles/permissões.
-- Login social, recuperação de senha, MFA adicional.
+- Nenhuma rota, edge function ou lógica de dados é tocada.
+- A rota `/chat` continua existindo; apenas o link da sidebar sai (acesso continua via Cmd+K e botões "Marcos: cobrar?" no card de cobranças).
