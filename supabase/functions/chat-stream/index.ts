@@ -64,6 +64,20 @@ Deno.serve(async (req: Request) => {
   // OpenClaw na VPS. Nada é injetado aqui.
   const messages = body.messages ?? [];
 
+  // Injetar system_prompt da instância se disponível e não já presente
+  let messagesWithSystem = messages as Array<{ role: string; content: string }>;
+
+  if (
+    instance.system_prompt &&
+    instance.system_prompt.trim() !== "" &&
+    (messagesWithSystem.length === 0 || messagesWithSystem[0].role !== "system")
+  ) {
+    messagesWithSystem = [
+      { role: "system", content: instance.system_prompt },
+      ...messagesWithSystem,
+    ];
+  }
+
   let upstream: Response;
   try {
     upstream = await fetch(upstreamUrl, {
@@ -75,7 +89,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: body.model ?? "openclaw",
-        messages,
+        messages: messagesWithSystem,
         stream: true,
         max_tokens: body.max_tokens ?? 2048,
       }),
