@@ -51,7 +51,7 @@ import { fetchOnboardingStatus } from "@/hooks/use-onboarding";
 import type { DashboardSnapshot, Goal } from "@/types/dashboard";
 
 export const Route = createFileRoute("/_authenticated/")({
-  head: () => ({ meta: [{ title: "Comando Central — Agente CFO" }] }),
+  head: () => ({ meta: [{ title: "Painel Financeiro — Agente CFO" }] }),
   component: ComandoCentral,
 });
 
@@ -335,15 +335,16 @@ function ComandoCentral() {
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            {greeting()}.{" "}
-            <span className="text-muted-foreground font-normal">
-              {crisisMode ? `Atenção: ${criticalInsights.length} alerta${criticalInsights.length > 1 ? "s" : ""}.` : "Tudo sob controle."}
-            </span>
+            {crisisMode
+              ? `${greeting()} — ${criticalInsights.length} alerta${criticalInsights.length > 1 ? "s" : ""} crítico${criticalInsights.length > 1 ? "s" : ""} hoje.`
+              : `${greeting()}, aqui está o resumo financeiro.`}
           </h1>
-          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground font-mono">
+          <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-full ${realtimeOk ? "bg-emerald-500 animate-pulse" : "bg-destructive"}`} />
-              {realtimeOk ? "REALTIME" : "OFFLINE"}
+              <span className={realtimeOk ? "text-emerald-500" : "text-destructive"}>
+                {realtimeOk ? "ao vivo" : "desconectado"}
+              </span>
             </span>
             <span>·</span>
             <span>{data ? `atualizado ${formatRelative(data.as_of)}` : "—"}</span>
@@ -388,6 +389,7 @@ function ComandoCentral() {
             loading={isLoading}
             insight={insightsBySection["payables"]}
             icon={<ArrowDown className="h-4 w-4 text-amber-500" />}
+            warn={!!(k && k.payables_30d_brl > k.receivables_30d_brl)}
           />
           <Kpi
             label="Pipeline ponderado"
@@ -398,7 +400,40 @@ function ComandoCentral() {
           />
         </div>
 
-        {/* Gráficos linha 1 */}
+        {/* Cobranças em aberto (prioridade) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Cobranças em aberto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : data && data.top_debtors.length > 0 ? (
+              <div className="divide-y divide-border">
+                {data.top_debtors.slice(0, 5).map((d, i) => (
+                  <div key={d.id ?? i} className="flex items-center justify-between py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{d.name}</p>
+                      {d.days_overdue !== undefined && (
+                        <p className="text-xs text-muted-foreground font-mono">{d.days_overdue}d em atraso</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold tabular-nums">{formatCurrencyBRL(d.brl)}</p>
+                      <button onClick={() => navigate({ to: "/chat" })} className="text-xs text-primary hover:underline">
+                        Marcos: cobrar?
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sem inadimplentes 🎉</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gráficos */}
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader>
@@ -453,72 +488,36 @@ function ComandoCentral() {
           </Card>
         </div>
 
-        {/* Linha 2 */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Receita por canal — 30d</CardTitle>
-            </CardHeader>
-            <CardContent className="h-72">
-              {isLoading ? (
-                <Skeleton className="h-full w-full" />
-              ) : data && data.by_channel_revenue_30d.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={data.by_channel_revenue_30d} dataKey="brl" nameKey="channel" innerRadius={50} outerRadius={90} paddingAngle={2}>
-                      {data.by_channel_revenue_30d.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RTooltip content={<CurrencyTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <EmptyChart text="Sem receita registrada" />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Top devedores</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-              ) : data && data.top_debtors.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {data.top_debtors.slice(0, 5).map((d, i) => (
-                    <div key={d.id ?? i} className="flex items-center justify-between py-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{d.name}</p>
-                        {d.days_overdue !== undefined && (
-                          <p className="text-xs text-muted-foreground font-mono">{d.days_overdue}d em atraso</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold tabular-nums">{formatCurrencyBRL(d.brl)}</p>
-                        <button onClick={() => navigate({ to: "/chat" })} className="text-xs text-primary hover:underline">
-                          Marcos: cobrar?
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground py-8 text-center">Sem inadimplentes 🎉</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Receita por canal */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Receita por canal — 30d</CardTitle>
+          </CardHeader>
+          <CardContent className="h-72">
+            {isLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : data && data.by_channel_revenue_30d.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data.by_channel_revenue_30d} dataKey="brl" nameKey="channel" innerRadius={50} outerRadius={90} paddingAngle={2}>
+                    {data.by_channel_revenue_30d.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RTooltip content={<CurrencyTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart text="Sem receita registrada" />
+            )}
+          </CardContent>
+        </Card>
 
         {/* Cenário */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4" /> Cenários "E se" — simule decisões em tempo real
-            </CardTitle>
+            <CardTitle className="text-base">Simulador de decisões</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <ScenarioSlider
@@ -530,7 +529,7 @@ function ComandoCentral() {
               hint={data ? `+${formatCurrencyBRL((data.kpis.overdue_total_brl * scenario.collect) / 100)}` : "—"}
             />
             <ScenarioSlider
-              label={`Fechar ${scenario.deals} deal(s) do pipeline`}
+              label={`Fechar ${scenario.deals} venda${scenario.deals !== 1 ? "s" : ""} pendente${scenario.deals !== 1 ? "s" : ""}`}
               value={scenario.deals}
               onChange={(v) => setScenario((s) => ({ ...s, deals: v }))}
               max={10}
@@ -634,6 +633,7 @@ function Kpi({
   insight,
   override,
   icon,
+  warn,
 }: {
   label: string;
   value: number | undefined;
@@ -641,10 +641,15 @@ function Kpi({
   insight?: Insight;
   override?: number;
   icon?: React.ReactNode;
+  warn?: boolean;
 }) {
   const isCritical = insight?.severity === "critical";
   return (
-    <Card className={`relative ${isCritical ? "border-destructive/50" : ""} ${override !== undefined ? "ring-1 ring-emerald-500/60 ring-dashed" : ""}`}>
+    <Card
+      className={`relative ${isCritical ? "border-destructive/50" : ""} ${
+        warn ? "border-amber-500/40 bg-amber-500/5" : ""
+      } ${override !== undefined ? "ring-1 ring-emerald-500/60 ring-dashed" : ""}`}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
         <CardTitle className="text-xs uppercase tracking-wider font-medium text-muted-foreground">{label}</CardTitle>
         {icon}
@@ -653,7 +658,7 @@ function Kpi({
         {loading ? (
           <Skeleton className="h-8 w-32" />
         ) : (
-          <div className="text-2xl font-semibold tabular-nums font-mono">
+          <div className={`text-2xl font-semibold tabular-nums font-mono ${warn ? "text-amber-400" : ""}`}>
             {override !== undefined ? (
               <span className="text-emerald-500">{formatCurrencyBRL(override)}</span>
             ) : (
