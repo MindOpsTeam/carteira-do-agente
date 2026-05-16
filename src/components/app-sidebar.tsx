@@ -38,8 +38,8 @@ const mainItems = [
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Metas", url: "/goals", icon: Target },
   { title: "Automações", url: "/automations", icon: Zap },
-  { title: "Integrações", url: "/integrations", icon: Plug },
   { title: "Alertas", url: "/alerts", icon: Bell },
+  { title: "Integrações", url: "/integrations", icon: Plug },
   { title: "Configurações", url: "/settings", icon: Settings, exact: true },
 ];
 
