@@ -60,21 +60,17 @@ Deno.serve(async (req: Request) => {
 
   const upstreamUrl = `${instance.ingress_url.replace(/\/$/, "")}/v1/chat/completions`;
 
-  // Proxy transparente — Marcos persona vem do skill agente-cfo dentro do
-  // OpenClaw na VPS. Nada é injetado aqui.
-  const messages = body.messages ?? [];
-
-  // Injetar system_prompt da instância se disponível e não já presente
-  let messagesWithSystem = messages as Array<{ role: string; content: string }>;
-
+  // Injetar system_prompt da instância como mensagem de sistema se disponível,
+  // mas somente se o cliente não enviou um system message próprio.
+  let messages = body.messages ?? [];
   if (
     instance.system_prompt &&
     instance.system_prompt.trim() !== "" &&
-    (messagesWithSystem.length === 0 || messagesWithSystem[0].role !== "system")
+    (messages.length === 0 || messages[0].role !== "system")
   ) {
-    messagesWithSystem = [
+    messages = [
       { role: "system", content: instance.system_prompt },
-      ...messagesWithSystem,
+      ...messages,
     ];
   }
 
@@ -89,7 +85,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: body.model ?? "openclaw",
-        messages: messagesWithSystem,
+        messages,
         stream: true,
         max_tokens: body.max_tokens ?? 2048,
       }),
