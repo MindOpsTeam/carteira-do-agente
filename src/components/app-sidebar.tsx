@@ -15,6 +15,7 @@ import {
   Cpu,
   ShieldCheck,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
 
 const mainItems = [
   { title: "Painel", url: "/", icon: LayoutDashboard, exact: true },
@@ -56,6 +58,17 @@ const ADMIN_OPEN_KEY = "cfo:sidebar-admin-open";
 export function AppSidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [adminOpen, setAdminOpen] = useState(false);
+  const [loadingMC, setLoadingMC] = useState(false);
+
+  const openMissionControl = async () => {
+    setLoadingMC(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("openclaw-dashboard-url");
+      if (!error && data?.url) window.open(data.url, "_blank");
+    } finally {
+      setLoadingMC(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -134,6 +147,14 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Mission Control" onClick={openMissionControl} disabled={loadingMC}>
+              {loadingMC
+                ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                : <ExternalLink className="h-4 w-4" />}
+              <span>Mission Control</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive("/settings", true)} tooltip="Configurações">
               <Link to="/settings">
