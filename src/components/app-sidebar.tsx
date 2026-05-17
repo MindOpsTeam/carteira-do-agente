@@ -133,5 +133,6 @@ export function AppSidebar() {
         </Collapsible>
       </SidebarContent>
     </Sidebar>
+    </div>
   );
 }
