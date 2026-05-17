@@ -74,7 +74,8 @@ export function AppSidebar() {
     exact ? path === url : path === url || path.startsWith(url + "/");
 
   return (
-    <Sidebar collapsible="icon">
+    <div className="dark">
+      <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
           <BarChart2 className="h-5 w-5 text-primary shrink-0" />
