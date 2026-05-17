@@ -19,6 +19,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -40,7 +41,6 @@ const mainItems = [
   { title: "Automações", url: "/automations", icon: Zap },
   { title: "Alertas", url: "/alerts", icon: Bell },
   { title: "Integrações", url: "/integrations", icon: Plug },
-  { title: "Configurações", url: "/settings", icon: Settings, exact: true },
 ];
 
 const adminItems = [
@@ -132,6 +132,18 @@ export function AppSidebar() {
           </SidebarGroup>
         </Collapsible>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive("/settings", true)} tooltip="Configurações">
+              <Link to="/settings">
+                <Settings className="h-4 w-4" />
+                <span>Configurações</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
     </div>
   );
