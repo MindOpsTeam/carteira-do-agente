@@ -15,6 +15,7 @@ import {
   Cpu,
   ShieldCheck,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
 
 const mainItems = [
   { title: "Painel", url: "/", icon: LayoutDashboard, exact: true },
