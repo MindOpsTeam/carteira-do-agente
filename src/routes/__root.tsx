@@ -1,6 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -70,9 +70,6 @@ function RootComponent() {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: { queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } },
   }));
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
