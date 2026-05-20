@@ -86,6 +86,10 @@ verify_jwt = true
 [functions.simulate-scenario]
 verify_jwt = true
 
+# Sprint IMPL-P0+P1 — Espelho de writes via chat (VPS → painel via X-Panel-Token)
+[functions.cfo-write-event]
+verify_jwt = false
+
 # VPS → painel via X-Panel-Token + X-Hooks-Token
 [functions.dashboard-publish-insights]
 verify_jwt = false
