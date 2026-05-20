@@ -49,6 +49,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyBRL, formatRelative } from "@/lib/format";
 import { fetchOnboardingStatus } from "@/hooks/use-onboarding";
 import type { DashboardSnapshot, Goal } from "@/types/dashboard";
+import { CfoWriteEventsWidget } from "@/components/cfo-write-events-widget";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({ meta: [{ title: "Painel Financeiro — Agente CFO" }] }),
@@ -432,6 +433,8 @@ function ComandoCentral() {
             )}
           </CardContent>
         </Card>
+
+        <CfoWriteEventsWidget />
 
         {/* Gráficos */}
         <div className="grid gap-4 lg:grid-cols-2">
