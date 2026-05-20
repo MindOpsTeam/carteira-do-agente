@@ -207,6 +207,69 @@ export type Database = {
         }
         Relationships: []
       }
+      cfo_write_events: {
+        Row: {
+          action: string
+          amount: number | null
+          category: string | null
+          channel: string
+          confirmed_at: string | null
+          created_at: string
+          dedup_key: string | null
+          due_date: string | null
+          erp: string | null
+          erp_record_id: string | null
+          error: string | null
+          id: string
+          instance_id: string | null
+          raw_text: string | null
+          run_id: string | null
+          status: string
+          supplier: string | null
+          thread_id: string
+        }
+        Insert: {
+          action: string
+          amount?: number | null
+          category?: string | null
+          channel: string
+          confirmed_at?: string | null
+          created_at?: string
+          dedup_key?: string | null
+          due_date?: string | null
+          erp?: string | null
+          erp_record_id?: string | null
+          error?: string | null
+          id?: string
+          instance_id?: string | null
+          raw_text?: string | null
+          run_id?: string | null
+          status?: string
+          supplier?: string | null
+          thread_id: string
+        }
+        Update: {
+          action?: string
+          amount?: number | null
+          category?: string | null
+          channel?: string
+          confirmed_at?: string | null
+          created_at?: string
+          dedup_key?: string | null
+          due_date?: string | null
+          erp?: string | null
+          erp_record_id?: string | null
+          error?: string | null
+          id?: string
+          instance_id?: string | null
+          raw_text?: string | null
+          run_id?: string | null
+          status?: string
+          supplier?: string | null
+          thread_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           channel: string
