@@ -222,6 +222,7 @@ export type Database = {
           error: string | null
           id: string
           instance_id: string | null
+          origin: string
           raw_text: string | null
           run_id: string | null
           status: string
@@ -242,6 +243,7 @@ export type Database = {
           error?: string | null
           id?: string
           instance_id?: string | null
+          origin?: string
           raw_text?: string | null
           run_id?: string | null
           status?: string
@@ -262,6 +264,7 @@ export type Database = {
           error?: string | null
           id?: string
           instance_id?: string | null
+          origin?: string
           raw_text?: string | null
           run_id?: string | null
           status?: string
@@ -431,6 +434,33 @@ export type Database = {
           period?: string
           target_value?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      hooks_dedup: {
+        Row: {
+          channel: string
+          created_at: string
+          dedup_key: string
+          expires_at: string
+          external_id: string
+          source: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          dedup_key: string
+          expires_at?: string
+          external_id: string
+          source?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          dedup_key?: string
+          expires_at?: string
+          external_id?: string
+          source?: string
         }
         Relationships: []
       }
@@ -674,6 +704,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      report_issues_log: {
+        Row: {
+          created_at: string
+          id: string
+          issue_url: string | null
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_url?: string | null
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_url?: string | null
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       scenarios: {
         Row: {
