@@ -13,6 +13,12 @@ export type CashProjectionPoint = { date: string; balance_brl: number };
 export type Debtor = { name: string; brl: number; days_overdue?: number; id?: string };
 export type IntegrationHealth = { name: string; status: string; last_sync: string | null };
 
+export type ManualChatTotals = {
+  inflow_brl: number;
+  outflow_brl: number;
+  count: number;
+};
+
 export type DashboardSnapshot = {
   as_of: string;
   kpis: DashboardKpis;
@@ -21,6 +27,7 @@ export type DashboardSnapshot = {
   cash_projection_90d: CashProjectionPoint[];
   top_debtors: Debtor[];
   integrations_health: IntegrationHealth[];
+  manual_chat?: ManualChatTotals;
 };
 
 export type GoalMetric = keyof DashboardKpis;
