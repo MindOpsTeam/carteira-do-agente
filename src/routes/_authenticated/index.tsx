@@ -132,14 +132,18 @@ function useInsights() {
 function ComandoCentral() {
   const navigate = useNavigate();
   const [needsOnboarding, setNeedsOnboarding] = useState<null | "no-instance" | "incomplete">(null);
-  const [realtimeOk, setRealtimeOk] = useState(true);
+  
 
   const { data, isLoading, isFetching, refetch, error } = useQuery<DashboardSnapshot, Error & { status?: number }>({
     queryKey: ["dashboard-snapshot"],
     queryFn: fetchSnapshot,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
     retry: (count, err) => (err as { status?: number })?.status === 401 ? false : count < 1,
   });
+
+  const realtimeOk = !!data && (Date.now() - new Date(data.as_of).getTime()) < 6 * 60 * 1000;
 
   // Detect real integrations (independent of dashboard-snapshot's instance-based view)
   const { data: hasIntegrations } = useQuery({
