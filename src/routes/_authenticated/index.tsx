@@ -143,6 +143,8 @@ function ComandoCentral() {
     retry: (count, err) => (err as { status?: number })?.status === 401 ? false : count < 1,
   });
 
+  const realtimeOk = !!data && (Date.now() - new Date(data.as_of).getTime()) < 6 * 60 * 1000;
+
   // Detect real integrations (independent of dashboard-snapshot's instance-based view)
   const { data: hasIntegrations } = useQuery({
     queryKey: ["has-integrations"],
