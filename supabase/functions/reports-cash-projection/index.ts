@@ -1,10 +1,7 @@
 /**
- * POST /reports-cash-projection
- * Solicita ao agente CFO na VPS uma projeção de caixa (30 ou 90 dias).
+ * GET/POST /reports-cash-projection
+ * Lê projeção de caixa do snapshot mais recente pushado pela VPS.
  * Auth: JWT Supabase do dono logado.
- *
- * Body: { instance_id: string, days?: number }
- * Retorna: { ok: true, data: <payload do erp_gateway.get_cash_projection> }
  */
 
 import {
@@ -16,67 +13,52 @@ import {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return errorResponse("Method not allowed", 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
+  if (req.method !== "POST") {
+    return errorResponse("Method not allowed", 405);
+  }
+
+  // ── Auth JWT ──────────────────────────────────────────────────────────────
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return errorResponse("Authorization obrigatório", 401);
+  if (!authHeader?.startsWith("Bearer ")) {
+    return errorResponse("Authorization header obrigatório", 401);
+  }
 
-  const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
-  if (!anonKey) return errorResponse("Configuração incompleta", 500);
+  const anonKey =
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+    Deno.env.get("SUPABASE_ANON_KEY");
+  if (!anonKey) {
+    return errorResponse("Configuração do painel incompleta", 500);
+  }
 
   const supabaseUser = createClient(
     Deno.env.get("SUPABASE_URL")!,
     anonKey,
     { global: { headers: { Authorization: authHeader } } },
   );
-  const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-  if (userError || !user) return errorResponse("JWT inválido", 401);
 
-  let body: { instance_id?: string; days?: number };
-  try { body = await req.json(); } catch { return errorResponse("Body inválido", 400); }
-  if (!body.instance_id) return errorResponse("instance_id obrigatório", 400);
-  const days = Math.min(Math.max(body.days ?? 90, 1), 180);
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseUser.auth.getUser();
+  if (userError || !user) {
+    return errorResponse("JWT inválido ou expirado", 401);
+  }
 
   const supabase = adminClient();
-  const { data: instance } = await supabase
-    .from("instances")
-    .select("ingress_url, hooks_token")
-    .eq("id", body.instance_id)
+
+  const { data: latest } = await supabase
+    .from("dashboard_snapshots")
+    .select("data")
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  if (!instance?.ingress_url || !instance?.hooks_token) {
-    return errorResponse("Instância não configurada", 422);
-  }
+  const cashProjection =
+    (latest?.data as Record<string, unknown> | null)?.reports?.cash_projection ?? {};
 
-  const command = `Execute: python3 ~/.openclaw/workspace/skills/agente-cfo/scripts/erp_gateway.py get_cash_projection --days ${days} --json`;
-
-  let resp: Response;
-  let txt: string;
-  try {
-    resp = await fetch(`${instance.ingress_url}/hooks/agent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${instance.hooks_token}` },
-      body: JSON.stringify({ message: command, name: "Reports", wakeMode: "now", deliver: false, timeoutSeconds: 60 }),
-      signal: AbortSignal.timeout(45_000),
-    });
-    txt = await resp.text();
-  } catch (err) {
-    return errorResponse(`Falha ao contatar instância: ${String(err)}`, 502);
-  }
-  if (!resp.ok) return errorResponse(`Cliente retornou ${resp.status}: ${txt}`, 502);
-
-  // Tenta extrair JSON da resposta do agente
-  let parsed: unknown = null;
-  try {
-    const outer = JSON.parse(txt);
-    const content = typeof outer === "string" ? outer : (outer?.content ?? outer?.response ?? outer?.message ?? outer);
-    const str = typeof content === "string" ? content : JSON.stringify(content);
-    const match = str.match(/\{[\s\S]*\}/);
-    parsed = match ? JSON.parse(match[0]) : outer;
-  } catch {
-    parsed = { raw: txt };
-  }
-
-  return jsonResponse({ ok: true, data: parsed });
+  return jsonResponse({ ok: true, data: cashProjection });
 });
