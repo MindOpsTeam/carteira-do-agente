@@ -145,17 +145,23 @@ function CashCard({ instanceId }: { instanceId: string | null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+// ---------- Card 1: Cash projection ----------
+function CashCard({ instanceId }: { instanceId: string | null }) {
+  const [data, setData] = useState<CashProjection | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const load = async (force = false) => {
     if (!instanceId) return;
     setLoading(true); setError(null);
-    const cacheKey = `reports.cash.${instanceId}.90`;
+    const cacheKey = `reports.cash.${instanceId}.v2`;
     if (!force) {
       const cached = readCache<CashProjection>(cacheKey, 60 * 60 * 1000);
       if (cached) { setData(cached); setLoading(false); return; }
     }
     try {
       const { data: resp, error } = await supabase.functions.invoke("reports-cash-projection", {
-        body: { instance_id: instanceId, days: 90 },
+        body: { instance_id: instanceId },
       });
       if (error) throw error;
       const payload = (resp?.data ?? {}) as CashProjection;
@@ -170,45 +176,45 @@ function CashCard({ instanceId }: { instanceId: string | null }) {
 
   useEffect(() => { if (instanceId) load(false); /* eslint-disable-next-line */ }, [instanceId]);
 
-  const daily = data?.daily_projection ?? [];
-  const sliced = useMemo(() => daily.slice(0, days), [daily, days]);
-  const minNeg = Math.min(0, ...sliced.map((d) => Number(d.balance_brl) || 0));
+  const weeks = data?.by_week ?? [];
+  const chartData = useMemo(() => {
+    let acc = Number(data?.balance_brl ?? 0);
+    return weeks.map((w) => {
+      acc += Number(w.net_brl) || 0;
+      return { date: w.to, balance_brl: acc };
+    });
+  }, [weeks, data?.balance_brl]);
+  const minNeg = Math.min(0, ...chartData.map((d) => d.balance_brl));
+  const projectedNeg = Number(data?.projected_balance_brl ?? 0) < 0;
+  const periodDays = data?.projection_days ?? 90;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
-          <CardTitle className="text-base">Saldo projetado</CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Próximos {days} dias</p>
+          <CardTitle className="text-base">Projeção de caixa</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Próximos {periodDays} dias</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as 30 | 90)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="30" className="h-6 px-3 text-xs">30d</TabsTrigger>
-              <TabsTrigger value="90" className="h-6 px-3 text-xs">90d</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button size="icon" variant="ghost" onClick={() => load(true)} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-        </div>
+        <Button size="icon" variant="ghost" onClick={() => load(true)} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? <Skeleton className="h-64 w-full" /> : error ? (
           <EmptyState title="Não foi possível carregar" description={error} />
-        ) : sliced.length === 0 ? (
-          <EmptyState title="Sem projeção disponível" description="O agente ainda não retornou dados de caixa." />
+        ) : weeks.length === 0 ? (
+          <EmptyState title="Sem dados de projeção ainda" description="O agente ainda não retornou dados de caixa." />
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Stat label="Saldo mínimo" value={formatCurrencyBRL(data?.min_balance_brl)} negative={(data?.min_balance_brl ?? 0) < 0} />
-              <Stat label="Data do mínimo" value={data?.min_balance_date ? formatDateTime(data.min_balance_date).slice(0, 10) : "—"} />
-              <Stat label="Entradas 30d" value={formatCurrencyBRL(data?.total_in_30d_brl)} icon={<TrendingUp className="h-4 w-4 text-emerald-500" />} />
-              <Stat label="Saídas 30d" value={formatCurrencyBRL(data?.total_out_30d_brl)} icon={<TrendingDown className="h-4 w-4 text-red-500" />} />
+              <Stat label="Saldo atual" value={formatCurrencyBRL(data?.balance_brl)} negative={(data?.balance_brl ?? 0) < 0} />
+              <Stat label="Entradas previstas" value={formatCurrencyBRL(data?.incoming_brl)} icon={<TrendingUp className="h-4 w-4 text-emerald-500" />} />
+              <Stat label="Saídas previstas" value={formatCurrencyBRL(data?.outgoing_brl)} icon={<TrendingDown className="h-4 w-4 text-red-500" />} />
+              <Stat label="Saldo projetado" value={formatCurrencyBRL(data?.projected_balance_brl)} negative={projectedNeg} />
             </div>
             <div className="h-64 w-full">
               <ResponsiveContainer>
-                <AreaChart data={sliced}>
+                <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="cashPos" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
@@ -230,7 +236,7 @@ function CashCard({ instanceId }: { instanceId: string | null }) {
                   <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
                   {minNeg < 0 && (
                     <Area
-                      type="monotone" dataKey={(d: DailyProj) => Math.min(0, Number(d.balance_brl) || 0)}
+                      type="monotone" dataKey={(d: { balance_brl: number }) => Math.min(0, Number(d.balance_brl) || 0)}
                       stroke="hsl(var(--destructive))" fill="url(#cashNeg)" isAnimationActive={false}
                     />
                   )}
