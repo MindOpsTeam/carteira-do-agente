@@ -197,3 +197,8 @@ verify_jwt = true
 
 [functions.alerts-test]
 verify_jwt = true
+
+# Sprint UI-2 — Evolution (WhatsApp) global config
+[functions.evolution-config-save]
+verify_jwt = true
+

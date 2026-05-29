@@ -43,6 +43,22 @@ function SettingsPage() {
   const [instanceLoading, setInstanceLoading] = useState(true);
   const [doctorLoading, setDoctorLoading] = useState(false);
   const [lastChatAt, setLastChatAt] = useState<string | null>(null);
+  const [openingOC, setOpeningOC] = useState(false);
+
+  const openOpenClaw = async () => {
+    setOpeningOC(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("openclaw-dashboard-url");
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+      else toast.error("URL do OpenClaw indisponível");
+    } catch (err) {
+      toast.error(`Falha ao abrir OpenClaw: ${String((err as Error).message ?? err)}`);
+    } finally {
+      setOpeningOC(false);
+    }
+  };
+
 
   useEffect(() => {
     (async () => {
@@ -242,32 +258,20 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Terminal className="h-4 w-4" />
-            Como editar configuração
+            Configuração avançada
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Budget LLM, número WhatsApp, chaves Omie e demais configurações vivem em{" "}
-            <code className="bg-muted px-1 py-0.5 rounded text-xs">~/.agente-cfo/.env</code>{" "}
-            na sua VPS. Para editar:
+            Budget LLM, chaves de integrações e demais parâmetros vivem no OpenClaw da sua VPS.
+            Abra o painel administrativo abaixo — sem SSH.
           </p>
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Editar .env</div>
-            <CodeBlock>{`nano ~/.agente-cfo/.env`}</CodeBlock>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Revalidar saúde após mudanças</div>
-            <CodeBlock>{`bash ~/.openclaw/workspace/skills/agente-cfo/scripts/doctor.sh`}</CodeBlock>
-          </div>
-          <a
-            href="https://github.com/MindOpsTeam/agente-cfo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary underline hover:no-underline"
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            Ver documentação completa no GitHub
-          </a>
+          <Button variant="outline" size="sm" onClick={openOpenClaw} disabled={openingOC}>
+            {openingOC
+              ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              : <HelpCircle className="h-4 w-4 mr-2" />}
+            Abrir OpenClaw (configuração avançada)
+          </Button>
         </CardContent>
       </Card>
     </div>

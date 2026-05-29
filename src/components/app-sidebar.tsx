@@ -47,6 +47,10 @@ const mainItems = [
   { title: "Integrações", url: "/integrations", icon: Plug },
 ];
 
+const channelItems = [
+  { title: "WhatsApp", url: "/settings/whatsapp", icon: MessageCircle },
+];
+
 const adminItems = [
   { title: "Instâncias", url: "/instances", icon: Server },
   { title: "Observabilidade", url: "/observability", icon: Activity },
@@ -118,7 +122,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        <SidebarGroup>
+          <SidebarGroupLabel>Canais</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {channelItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                    <Link to={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <Collapsible open={adminOpen} onOpenChange={toggleAdmin}>
+
           <SidebarGroup>
             <CollapsibleTrigger asChild>
               <SidebarGroupLabel className="cursor-pointer flex items-center justify-between hover:text-foreground transition-colors">

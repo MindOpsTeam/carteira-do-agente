@@ -27,6 +27,7 @@ import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedIntegrationsIndexRouteImport } from './routes/_authenticated/integrations.index'
 import { Route as AuthenticatedInstancesIndexRouteImport } from './routes/_authenticated/instances.index'
 import { Route as AuthenticatedAutomationsIndexRouteImport } from './routes/_authenticated/automations.index'
+import { Route as AuthenticatedSettingsWhatsappRouteImport } from './routes/_authenticated/settings_.whatsapp'
 import { Route as AuthenticatedSettingsSistemaRouteImport } from './routes/_authenticated/settings_.sistema'
 import { Route as AuthenticatedIntegrationsSupabaseRouteImport } from './routes/_authenticated/integrations.supabase'
 import { Route as AuthenticatedIntegrationsNuvemshopRouteImport } from './routes/_authenticated/integrations.nuvemshop'
@@ -133,6 +134,12 @@ const AuthenticatedAutomationsIndexRoute =
   AuthenticatedAutomationsIndexRouteImport.update({
     id: '/automations/',
     path: '/automations/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsWhatsappRoute =
+  AuthenticatedSettingsWhatsappRouteImport.update({
+    id: '/settings_/whatsapp',
+    path: '/settings/whatsapp',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSettingsSistemaRoute =
@@ -244,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/sistema': typeof AuthenticatedSettingsSistemaRoute
+  '/settings/whatsapp': typeof AuthenticatedSettingsWhatsappRoute
   '/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/instances/': typeof AuthenticatedInstancesIndexRoute
   '/integrations/': typeof AuthenticatedIntegrationsIndexRoute
@@ -277,6 +285,7 @@ export interface FileRoutesByTo {
   '/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/settings/sistema': typeof AuthenticatedSettingsSistemaRoute
+  '/settings/whatsapp': typeof AuthenticatedSettingsWhatsappRoute
   '/automations': typeof AuthenticatedAutomationsIndexRoute
   '/instances': typeof AuthenticatedInstancesIndexRoute
   '/integrations': typeof AuthenticatedIntegrationsIndexRoute
@@ -312,6 +321,7 @@ export interface FileRoutesById {
   '/_authenticated/integrations/nuvemshop': typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   '/_authenticated/integrations/supabase': typeof AuthenticatedIntegrationsSupabaseRoute
   '/_authenticated/settings_/sistema': typeof AuthenticatedSettingsSistemaRoute
+  '/_authenticated/settings_/whatsapp': typeof AuthenticatedSettingsWhatsappRoute
   '/_authenticated/automations/': typeof AuthenticatedAutomationsIndexRoute
   '/_authenticated/instances/': typeof AuthenticatedInstancesIndexRoute
   '/_authenticated/integrations/': typeof AuthenticatedIntegrationsIndexRoute
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/integrations/nuvemshop'
     | '/integrations/supabase'
     | '/settings/sistema'
+    | '/settings/whatsapp'
     | '/automations/'
     | '/instances/'
     | '/integrations/'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/integrations/nuvemshop'
     | '/integrations/supabase'
     | '/settings/sistema'
+    | '/settings/whatsapp'
     | '/automations'
     | '/instances'
     | '/integrations'
@@ -414,6 +426,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integrations/nuvemshop'
     | '/_authenticated/integrations/supabase'
     | '/_authenticated/settings_/sistema'
+    | '/_authenticated/settings_/whatsapp'
     | '/_authenticated/automations/'
     | '/_authenticated/instances/'
     | '/_authenticated/integrations/'
@@ -558,6 +571,13 @@ declare module '@tanstack/react-router' {
       path: '/automations'
       fullPath: '/automations/'
       preLoaderRoute: typeof AuthenticatedAutomationsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings_/whatsapp': {
+      id: '/_authenticated/settings_/whatsapp'
+      path: '/settings/whatsapp'
+      fullPath: '/settings/whatsapp'
+      preLoaderRoute: typeof AuthenticatedSettingsWhatsappRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings_/sistema': {
@@ -756,6 +776,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegrationsNuvemshopRoute: typeof AuthenticatedIntegrationsNuvemshopRouteWithChildren
   AuthenticatedIntegrationsSupabaseRoute: typeof AuthenticatedIntegrationsSupabaseRoute
   AuthenticatedSettingsSistemaRoute: typeof AuthenticatedSettingsSistemaRoute
+  AuthenticatedSettingsWhatsappRoute: typeof AuthenticatedSettingsWhatsappRoute
   AuthenticatedAutomationsIndexRoute: typeof AuthenticatedAutomationsIndexRoute
   AuthenticatedInstancesIndexRoute: typeof AuthenticatedInstancesIndexRoute
   AuthenticatedIntegrationsIndexRoute: typeof AuthenticatedIntegrationsIndexRoute
@@ -787,6 +808,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIntegrationsSupabaseRoute:
     AuthenticatedIntegrationsSupabaseRoute,
   AuthenticatedSettingsSistemaRoute: AuthenticatedSettingsSistemaRoute,
+  AuthenticatedSettingsWhatsappRoute: AuthenticatedSettingsWhatsappRoute,
   AuthenticatedAutomationsIndexRoute: AuthenticatedAutomationsIndexRoute,
   AuthenticatedInstancesIndexRoute: AuthenticatedInstancesIndexRoute,
   AuthenticatedIntegrationsIndexRoute: AuthenticatedIntegrationsIndexRoute,
