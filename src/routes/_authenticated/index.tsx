@@ -651,6 +651,7 @@ function Kpi({
   override,
   icon,
   warn,
+  subtext,
 }: {
   label: string;
   value: number | undefined;
@@ -659,6 +660,7 @@ function Kpi({
   override?: number;
   icon?: React.ReactNode;
   warn?: boolean;
+  subtext?: string;
 }) {
   const isCritical = insight?.severity === "critical";
   return (
@@ -682,6 +684,9 @@ function Kpi({
               formatCurrencyBRL(value ?? 0)
             )}
           </div>
+        )}
+        {subtext && !loading && (
+          <p className="text-[11px] text-muted-foreground">{subtext}</p>
         )}
         {insight && (
           <div className={`text-xs flex items-start gap-1.5 ${isCritical ? "text-destructive" : "text-muted-foreground"}`}>
