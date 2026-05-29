@@ -132,7 +132,7 @@ function useInsights() {
 function ComandoCentral() {
   const navigate = useNavigate();
   const [needsOnboarding, setNeedsOnboarding] = useState<null | "no-instance" | "incomplete">(null);
-  const realtimeOk = !!data && (Date.now() - new Date(data.as_of).getTime()) < 6 * 60 * 1000;
+  
 
   const { data, isLoading, isFetching, refetch, error } = useQuery<DashboardSnapshot, Error & { status?: number }>({
     queryKey: ["dashboard-snapshot"],
