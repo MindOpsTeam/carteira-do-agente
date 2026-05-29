@@ -14,6 +14,8 @@ const ALLOWED_ACTIONS = new Set([
   "openclaw_config_get", "openclaw_config_set", "openclaw_config_unset",
   "openclaw_plugins_install", "openclaw_plugins_list",
   "mcp_sync_now",
+  "whatsapp_pair_new", "whatsapp_pair_status",
+  "openclaw_status", "openclaw_health", "openclaw_doctor",
 ]);
 
 Deno.serve(async (req: Request) => {
