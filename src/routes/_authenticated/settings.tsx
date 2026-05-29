@@ -43,6 +43,22 @@ function SettingsPage() {
   const [instanceLoading, setInstanceLoading] = useState(true);
   const [doctorLoading, setDoctorLoading] = useState(false);
   const [lastChatAt, setLastChatAt] = useState<string | null>(null);
+  const [openingOC, setOpeningOC] = useState(false);
+
+  const openOpenClaw = async () => {
+    setOpeningOC(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("openclaw-dashboard-url");
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+      else toast.error("URL do OpenClaw indisponível");
+    } catch (err) {
+      toast.error(`Falha ao abrir OpenClaw: ${String((err as Error).message ?? err)}`);
+    } finally {
+      setOpeningOC(false);
+    }
+  };
+
 
   useEffect(() => {
     (async () => {
