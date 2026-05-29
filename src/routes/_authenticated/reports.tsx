@@ -23,13 +23,22 @@ export const Route = createFileRoute("/_authenticated/reports")({
 });
 
 // ---------- types ----------
-type DailyProj = { date: string; balance_brl: number };
+type CashWeek = {
+  week: number;
+  from: string;
+  to: string;
+  net_brl: number;
+  incoming_brl: number;
+  outgoing_brl: number;
+};
 type CashProjection = {
-  daily_projection?: DailyProj[];
-  min_balance_brl?: number;
-  min_balance_date?: string;
-  total_in_30d_brl?: number;
-  total_out_30d_brl?: number;
+  as_of?: string;
+  balance_brl?: number;
+  incoming_brl?: number;
+  outgoing_brl?: number;
+  projected_balance_brl?: number;
+  projection_days?: number;
+  by_week?: CashWeek[];
 };
 type ByStage = { stage: string; total_brl: number; weighted_brl: number; count: number };
 type ByWindow = { window: string; total_brl: number; weighted_brl: number; count: number };
