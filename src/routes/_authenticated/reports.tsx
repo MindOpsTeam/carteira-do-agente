@@ -138,12 +138,7 @@ function PageHeader() {
   );
 }
 
-// ---------- Card 1: Cash projection ----------
-function CashCard({ instanceId }: { instanceId: string | null }) {
-  const [days, setDays] = useState<30 | 90>(30);
-  const [data, setData] = useState<CashProjection | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
 
 // ---------- Card 1: Cash projection ----------
 function CashCard({ instanceId }: { instanceId: string | null }) {
