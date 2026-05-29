@@ -315,6 +315,41 @@ function SistemaPage() {
           {statusOutput && <CodeBlock>{statusOutput}</CodeBlock>}
         </CardContent>
       </Card>
+
+      {/* OpenClaw */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4" /> OpenClaw / VPS
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Button
+            variant="outline"
+            disabled={!!pendingAction}
+            onClick={() => runAction("oc-status", "openclaw_status", {}, "action")}
+          >
+            {isLoading("oc-status") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+            Status OpenClaw
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!!pendingAction}
+            onClick={() => runAction("oc-health", "openclaw_health", {}, "action")}
+          >
+            {isLoading("oc-health") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+            Health
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!!pendingAction}
+            onClick={() => runAction("oc-doctor", "openclaw_doctor", {}, "action")}
+          >
+            {isLoading("oc-doctor") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Terminal className="h-4 w-4" />}
+            Doctor
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
