@@ -173,9 +173,6 @@ verify_jwt = false
 [functions.openclaw-ws-url]
 verify_jwt = true
 
-# Sprint 31 — Chat SSE proxy (browser → edge → tunnel)
-[functions.chat-stream]
-verify_jwt = true
 
 # Sprint 35 — Unified incoming message entry (WhatsApp + Telegram webhooks)
 [functions.incoming-message]
