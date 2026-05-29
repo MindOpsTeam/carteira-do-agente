@@ -202,3 +202,15 @@ verify_jwt = true
 [functions.evolution-config-save]
 verify_jwt = true
 
+# Sprint UI-3 — Evolution direct pair/status + webhook
+[functions.evolution-instance-pair]
+verify_jwt = true
+
+[functions.evolution-instance-status]
+verify_jwt = true
+
+[functions.whatsapp-evolution-webhook]
+verify_jwt = false
+
+
+
