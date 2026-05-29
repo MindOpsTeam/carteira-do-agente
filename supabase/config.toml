@@ -83,6 +83,10 @@ verify_jwt = true
 [functions.dashboard-snapshot]
 verify_jwt = true
 
+# Sprint FIX-KPI-2 — VPS pusha snapshot agregado (VPS → painel via X-Panel-Token)
+[functions.dashboard-snapshot-push]
+verify_jwt = false
+
 [functions.simulate-scenario]
 verify_jwt = true
 
