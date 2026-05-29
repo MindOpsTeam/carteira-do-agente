@@ -47,6 +47,10 @@ const mainItems = [
   { title: "Integrações", url: "/integrations", icon: Plug },
 ];
 
+const channelItems = [
+  { title: "WhatsApp", url: "/settings/whatsapp", icon: MessageCircle },
+];
+
 const adminItems = [
   { title: "Instâncias", url: "/instances", icon: Server },
   { title: "Observabilidade", url: "/observability", icon: Activity },
