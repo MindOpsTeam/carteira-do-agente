@@ -387,6 +387,11 @@ function ComandoCentral() {
             loading={isLoading}
             insight={insightsBySection["receivables"]}
             icon={<ArrowUp className="h-4 w-4 text-emerald-500" />}
+            subtext={
+              data?.manual_chat && data.manual_chat.inflow_brl > 0
+                ? `inclui ${formatCurrencyBRL(data.manual_chat.inflow_brl)} via chat`
+                : undefined
+            }
           />
           <Kpi
             label="A pagar 30d"
@@ -395,6 +400,11 @@ function ComandoCentral() {
             insight={insightsBySection["payables"]}
             icon={<ArrowDown className="h-4 w-4 text-amber-500" />}
             warn={!!(k && k.payables_30d_brl > k.receivables_30d_brl)}
+            subtext={
+              data?.manual_chat && data.manual_chat.outflow_brl > 0
+                ? `inclui ${formatCurrencyBRL(data.manual_chat.outflow_brl)} via chat`
+                : undefined
+            }
           />
           <Kpi
             label="Pipeline ponderado"
@@ -641,6 +651,7 @@ function Kpi({
   override,
   icon,
   warn,
+  subtext,
 }: {
   label: string;
   value: number | undefined;
@@ -649,6 +660,7 @@ function Kpi({
   override?: number;
   icon?: React.ReactNode;
   warn?: boolean;
+  subtext?: string;
 }) {
   const isCritical = insight?.severity === "critical";
   return (
@@ -672,6 +684,9 @@ function Kpi({
               formatCurrencyBRL(value ?? 0)
             )}
           </div>
+        )}
+        {subtext && !loading && (
+          <p className="text-[11px] text-muted-foreground">{subtext}</p>
         )}
         {insight && (
           <div className={`text-xs flex items-start gap-1.5 ${isCritical ? "text-destructive" : "text-muted-foreground"}`}>
