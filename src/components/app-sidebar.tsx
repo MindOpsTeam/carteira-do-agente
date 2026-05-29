@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ExternalLink,
   MessageCircle,
+  Send,
 } from "lucide-react";
 import {
   Sidebar,
