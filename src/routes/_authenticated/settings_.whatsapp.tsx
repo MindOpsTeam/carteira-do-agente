@@ -9,10 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Eye, EyeOff, Copy, Loader2, Plus, RefreshCw, MessageCircle, Smartphone, CheckCircle2,
+  Eye, EyeOff, Copy, Loader2, RefreshCw, MessageCircle, Smartphone, CheckCircle2, QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatRelative } from "@/lib/format";
@@ -29,7 +26,6 @@ type EvolutionConfig = {
   webhook_secret: string | null;
   last_test_status: string | null;
   last_test_at: string | null;
-  last_test_detail: string | null;
 };
 
 type WhatsAppInstance = {
@@ -42,15 +38,6 @@ type WhatsAppInstance = {
   last_seen: string | null;
 };
 
-type ChatMsg = {
-  id: number;
-  content: string;
-  status: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string | null;
-};
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const INSTANCE_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 
 function StatusPill({ status }: { status: string }) {
@@ -67,6 +54,12 @@ function StatusPill({ status }: { status: string }) {
   return <Badge variant="secondary">Desconectado</Badge>;
 }
 
+function toQrSrc(qr: string | null): string | null {
+  if (!qr) return null;
+  if (qr.startsWith("data:")) return qr;
+  return `data:image/png;base64,${qr}`;
+}
+
 function WhatsAppPage() {
   // Evolution config
   const [cfg, setCfg] = useState<EvolutionConfig | null>(null);
@@ -81,19 +74,19 @@ function WhatsAppPage() {
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
   const [instLoading, setInstLoading] = useState(true);
 
-  // Pareamento
-  const [pairOpen, setPairOpen] = useState(false);
-  const [pairName, setPairName] = useState("");
+  // Conectar
+  const [pairName, setPairName] = useState("cfo-whatsapp");
   const [pairing, setPairing] = useState(false);
-  const [pairQr, setPairQr] = useState<string | null>(null);
-  const [pairText, setPairText] = useState<string | null>(null);
-  const pendingRunIds = useRef<Map<string, "pair">>(new Map());
+  const [activeQr, setActiveQr] = useState<string | null>(null);
+  const [activeInstance, setActiveInstance] = useState<string | null>(null);
+  const [connState, setConnState] = useState<string>("idle"); // idle|waiting_scan|open|close
+  const pollRef = useRef<number | null>(null);
 
   async function loadCfg() {
     setCfgLoading(true);
     const { data } = await supabase
       .from("evolution_config")
-      .select("id, base_url, active, webhook_secret, last_test_status, last_test_at, last_test_detail")
+      .select("id, base_url, active, webhook_secret, last_test_status, last_test_at")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -117,58 +110,34 @@ function WhatsAppPage() {
 
   useEffect(() => { loadCfg(); loadInstances(); }, []);
 
-  // Realtime admin thread (para QR de pareamento)
+  // Polling de status
   useEffect(() => {
-    let unsub: (() => void) | undefined;
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) return;
-      const threadId = `admin:${data.user.id}`;
-      const channel = supabase
-        .channel(`wa-admin:${data.user.id}`)
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` },
-          (p) => handleAdminMsg(p.new as ChatMsg),
-        )
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` },
-          (p) => handleAdminMsg(p.new as ChatMsg),
-        )
-        .subscribe();
-      unsub = () => { supabase.removeChannel(channel); };
-    })();
-    return () => { unsub?.(); };
-  }, []);
-
-  function handleAdminMsg(msg: ChatMsg) {
-    if (msg.status !== "sent" || !msg.content) return;
-    const meta = (msg.metadata ?? {}) as Record<string, unknown>;
-    const runId = String(meta.runId ?? "");
-    if (!pendingRunIds.current.has(runId)) return;
-    pendingRunIds.current.delete(runId);
-
-    // Tenta extrair qr_code_b64 ou qr_url do output
-    let qr: string | null = null;
-    try {
-      const parsed = JSON.parse(msg.content);
-      if (parsed?.qr_code_b64) qr = `data:image/png;base64,${parsed.qr_code_b64}`;
-      else if (parsed?.qr_url) qr = parsed.qr_url;
-    } catch {
-      const m = msg.content.match(/data:image\/png;base64,[A-Za-z0-9+/=]+/);
-      if (m) qr = m[0];
+    if (!activeInstance || connState === "open") {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
     }
-    if (qr) {
-      setPairQr(qr);
-      setPairText(null);
-    } else {
-      setPairText(msg.content);
-    }
-    setPairing(false);
-    loadInstances();
-    toast.success("Resposta recebida do agente");
-  }
+    const tick = async () => {
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (!token) return;
+        const { data, error } = await supabase.functions.invoke("evolution-instance-status", {
+          body: { instance_name: activeInstance },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (error) return;
+        const state = (data as { state?: string })?.state ?? "close";
+        setConnState(state);
+        if (state === "open") {
+          toast.success("WhatsApp conectado ✅");
+          loadInstances();
+        }
+      } catch { /* ignore */ }
+    };
+    tick();
+    pollRef.current = window.setInterval(tick, 4000);
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [activeInstance, connState]);
 
   async function saveCfg() {
     if (!baseUrl.trim()) { toast.error("base_url obrigatória"); return; }
@@ -179,16 +148,13 @@ function WhatsAppPage() {
       if (!token) throw new Error("Sem sessão ativa");
       const body: Record<string, unknown> = { base_url: baseUrl.trim(), active };
       if (apiKey.trim()) body.api_key = apiKey.trim();
-      const { data, error } = await supabase.functions.invoke("evolution-config-save", {
+      const { error } = await supabase.functions.invoke("evolution-config-save", {
         body, headers: { Authorization: `Bearer ${token}` },
       });
       if (error) throw error;
       toast.success("Configuração salva");
       setApiKey("");
       await loadCfg();
-      if ((data as { webhook_secret?: string })?.webhook_secret) {
-        // já vai via loadCfg
-      }
     } catch (err) {
       toast.error(`Falha: ${String((err as Error).message ?? err)}`);
     } finally {
@@ -212,41 +178,37 @@ function WhatsAppPage() {
     setInstances((prev) => prev.map((i) => i.id === inst.id ? { ...i, receives_marcos_chat: value } : i));
   }
 
-  async function startPair() {
-    if (!INSTANCE_RE.test(pairName.trim())) {
+  async function connectInstance() {
+    const name = pairName.trim();
+    if (!INSTANCE_RE.test(name)) {
       toast.error("Nome inválido (a-z, 0-9, _ ou -, até 64 chars)");
       return;
     }
     setPairing(true);
-    setPairQr(null);
-    setPairText(null);
+    setActiveQr(null);
+    setConnState("waiting_scan");
     try {
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
       if (!token) throw new Error("Sem sessão ativa");
-      const { data, error } = await supabase.functions.invoke("vps-admin-action", {
-        body: { action: "whatsapp_pair_new", params: { instance: pairName.trim() } },
+      const { data, error } = await supabase.functions.invoke("evolution-instance-pair", {
+        body: { instance_name: name },
         headers: { Authorization: `Bearer ${token}` },
       });
       if (error) throw error;
-      const runId = (data as { run_id?: string })?.run_id;
-      if (!runId) throw new Error("Sem run_id");
-      pendingRunIds.current.set(runId, "pair");
-      toast.message("Pareamento iniciado", { description: "Aguardando QR..." });
-      setTimeout(() => {
-        if (pendingRunIds.current.has(runId)) {
-          pendingRunIds.current.delete(runId);
-          setPairing(false);
-          toast.error("Timeout — agente não respondeu em 90s");
-        }
-      }, 90_000);
+      const qr = (data as { qr_base64?: string })?.qr_base64 ?? null;
+      setActiveQr(qr);
+      setActiveInstance(name);
+      if (!qr) toast.message("Instância criada", { description: "QR não retornado — tente Gerar novo QR." });
+      else toast.success("QR gerado — escaneie no WhatsApp");
+      loadInstances();
     } catch (err) {
-      setPairing(false);
       toast.error(`Falha: ${String((err as Error).message ?? err)}`);
+      setConnState("idle");
+    } finally {
+      setPairing(false);
     }
   }
-
-  const webhookUrl = `${SUPABASE_URL}/functions/v1/incoming-message`;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -277,22 +239,20 @@ function WhatsAppPage() {
               </div>
               <div className="grid gap-2">
                 <Label>API Key</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      type={showKey ? "text" : "password"}
-                      placeholder={cfg ? "•••••••• (mantém atual se vazio)" : "API key da Evolution"}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowKey((v) => !v)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                <div className="relative">
+                  <Input
+                    type={showKey ? "text" : "password"}
+                    placeholder={cfg ? "•••••••• (mantém atual se vazio)" : "API key da Evolution"}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -305,30 +265,16 @@ function WhatsAppPage() {
               </Button>
 
               {cfg?.webhook_secret && (
-                <div className="border rounded p-3 space-y-2 bg-muted/30">
-                  <div className="text-xs font-semibold">Webhook (configure na Evolution)</div>
-                  <div className="grid gap-1">
-                    <Label className="text-xs">URL</Label>
-                    <div className="flex gap-1">
-                      <Input readOnly value={webhookUrl} className="text-xs font-mono" />
-                      <Button size="icon" variant="outline" onClick={() => copyText(webhookUrl)}>
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid gap-1">
-                    <Label className="text-xs">Secret</Label>
-                    <div className="flex gap-1">
-                      <Input readOnly value={cfg.webhook_secret} className="text-xs font-mono" />
-                      <Button size="icon" variant="outline" onClick={() => copyText(cfg.webhook_secret!)}>
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                <div className="border rounded p-3 space-y-1 bg-muted/30">
+                  <div className="text-xs font-semibold">Webhook (configurado automaticamente)</div>
+                  <div className="flex gap-1 items-center">
+                    <Input readOnly value={cfg.webhook_secret} className="text-xs font-mono" />
+                    <Button size="icon" variant="outline" onClick={() => copyText(cfg.webhook_secret!)}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Aponte o webhook da Evolution para a URL acima enviando
-                    {" "}<code>channel: "whatsapp:&lt;instance&gt;"</code>,
-                    {" "}<code>external_id</code>, <code>text</code> e <code>secret</code> com o valor acima.
+                    A plataforma configura o webhook na Evolution ao gerar o QR.
                   </p>
                 </div>
               )}
@@ -344,20 +290,73 @@ function WhatsAppPage() {
         </CardContent>
       </Card>
 
-      {/* Instâncias */}
+      {/* Conectar / QR */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <QrCode className="h-4 w-4" /> Conectar WhatsApp
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="grid gap-2">
+              <Label>Nome da instância</Label>
+              <Input
+                placeholder="cfo-whatsapp"
+                value={pairName}
+                onChange={(e) => setPairName(e.target.value)}
+                disabled={pairing || connState === "waiting_scan"}
+              />
+            </div>
+            <Button onClick={connectInstance} disabled={pairing || !pairName.trim() || !cfg}>
+              {pairing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {activeQr && connState !== "open" ? "Gerar novo QR" : "Conectar / Gerar QR"}
+            </Button>
+          </div>
+
+          {!cfg && (
+            <p className="text-xs text-muted-foreground">
+              Configure a Evolution API acima antes de conectar.
+            </p>
+          )}
+
+          {connState === "open" && activeInstance && (
+            <div className="flex flex-col items-center gap-2 border rounded p-6 bg-emerald-500/5">
+              <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+              <div className="font-medium text-emerald-700 dark:text-emerald-400">
+                WhatsApp conectado ✅
+              </div>
+              <div className="text-xs text-muted-foreground">Marcos já atende em <code>{activeInstance}</code></div>
+            </div>
+          )}
+
+          {activeQr && connState !== "open" && (
+            <div className="flex flex-col items-center gap-3 border rounded p-4">
+              <img
+                src={toQrSrc(activeQr)!}
+                alt="QR code WhatsApp"
+                className="h-64 w-64 object-contain border rounded bg-white"
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                Abra <b>WhatsApp → Aparelhos conectados → Conectar aparelho</b> e escaneie o QR.
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Aguardando leitura… {connState === "close" && "(QR pode ter expirado — gere um novo)"}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Lista de instâncias */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Smartphone className="h-4 w-4" /> Números pareados
           </CardTitle>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={loadInstances}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button size="sm" onClick={() => { setPairOpen(true); setPairQr(null); setPairText(null); setPairName(""); }}>
-              <Plus className="h-4 w-4 mr-1" /> Parear novo número
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={loadInstances}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </CardHeader>
         <CardContent>
           {instLoading ? <Skeleton className="h-24 w-full" /> : instances.length === 0 ? (
@@ -389,56 +388,6 @@ function WhatsAppPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Dialog pareamento */}
-      <Dialog open={pairOpen} onOpenChange={setPairOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Parear novo número</DialogTitle>
-            <DialogDescription>
-              Escolha um identificador para a instância (a-z, 0-9, _ ou -). Você escaneará o QR com o WhatsApp do número.
-            </DialogDescription>
-          </DialogHeader>
-
-          {!pairQr && !pairText && (
-            <div className="grid gap-2">
-              <Label>Nome da instância</Label>
-              <Input
-                placeholder="ex: comercial-01"
-                value={pairName}
-                onChange={(e) => setPairName(e.target.value)}
-                disabled={pairing}
-              />
-            </div>
-          )}
-
-          {pairQr && (
-            <div className="flex flex-col items-center gap-3">
-              <img src={pairQr} alt="QR code" className="h-64 w-64 object-contain border rounded" />
-              <p className="text-xs text-muted-foreground text-center">
-                Abra o WhatsApp → Aparelhos conectados → Conectar aparelho e escaneie o QR.
-              </p>
-            </div>
-          )}
-
-          {pairText && !pairQr && (
-            <pre className="bg-muted rounded p-2 text-xs whitespace-pre-wrap break-all max-h-64 overflow-auto">
-              {pairText}
-            </pre>
-          )}
-
-          <DialogFooter>
-            {!pairQr && !pairText ? (
-              <Button onClick={startPair} disabled={pairing || !pairName.trim()}>
-                {pairing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Solicitar QR
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => setPairOpen(false)}>Fechar</Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
