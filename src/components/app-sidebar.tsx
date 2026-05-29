@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ChevronDown,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const mainItems = [
   { title: "Painel", url: "/", icon: LayoutDashboard, exact: true },
+  { title: "Conversar com Marcos", url: "/chat", icon: MessageCircle },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Metas", url: "/goals", icon: Target },
   { title: "Automações", url: "/automations", icon: Zap },

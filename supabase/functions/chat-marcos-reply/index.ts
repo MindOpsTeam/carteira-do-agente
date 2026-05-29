@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
   // Tenta achar o placeholder pending
   const { data: existing } = await supabase
     .from("chat_messages")
-    .select("id")
+    .select("id, metadata")
     .eq("thread_id", threadId)
     .eq("role", "marcos")
     .eq("status", "pending")
@@ -54,9 +54,10 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (existing) {
+    const prevMeta = (existing.metadata ?? {}) as Record<string, unknown>;
     await supabase
       .from("chat_messages")
-      .update({ content, status, metadata: { runId } })
+      .update({ content, status, metadata: { ...prevMeta, runId } })
       .eq("id", existing.id);
   } else {
     await supabase.from("chat_messages").insert({
