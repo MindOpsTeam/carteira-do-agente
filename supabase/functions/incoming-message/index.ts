@@ -4,6 +4,11 @@
  * Auth: secret específico do canal validado contra DB. verify_jwt=false.
  */
 import { adminClient, corsHeaders, errorResponse, jsonResponse } from "../_shared/auth.ts";
+import {
+  buildToolContext,
+  dispatchAgentHook,
+  resolveFreshInstance,
+} from "../_shared/agent-dispatch.ts";
 
 type Body = { channel?: string; external_id?: string; text?: string; secret?: string; };
 
@@ -56,26 +61,13 @@ Deno.serve(async (req: Request) => {
   }).select("id").single();
   if (userMsgErr || !userMsg) return errorResponse(userMsgErr?.message ?? "insert fail", 500);
 
-  const { data: vps } = await supabase.from("instances")
-    .select("id, ingress_url, hooks_token, last_heartbeat")
-    .not("ingress_url", "is", null).not("hooks_token", "is", null)
-    .order("last_heartbeat", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
-
-  const lastHbMs = vps?.last_heartbeat ? new Date(vps.last_heartbeat).getTime() : 0;
-  const isFresh = Date.now() - lastHbMs < 5 * 60 * 1000;
-
-  if (!vps?.ingress_url || !vps?.hooks_token || !isFresh) {
+  const instance = await resolveFreshInstance(supabase);
+  if (!instance) {
     await supabase.from("chat_messages").update({ status: "error", metadata: { error: "no_vps_instance" } }).eq("id", userMsg.id);
     return jsonResponse({ ok: true, warn: "no_vps" });
   }
 
-  const { data: supabaseProjects } = await supabase.from("supabase_projects").select("name, project_url").eq("active", true);
-  const { data: integrationCreds } = await supabase.from("integration_credentials").select("skill_name").eq("active", true);
-
-  const slugify = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const supaCtx = (supabaseProjects ?? []).map((p) => `- supabase_${slugify(p.name)} (${p.name}): MCP server em ${p.project_url}.`).join("\n");
-  const integCtx = (integrationCreds ?? []).map((c) => `- skill ${c.skill_name}: scripts em $HOME/.openclaw/workspace/skills/${c.skill_name}/`).join("\n");
-  const contextBlock = (supaCtx || integCtx) ? `\n\nCONTEXTO — FERRAMENTAS:\n${supaCtx}\n${integCtx}\n` : "";
+  const contextBlock = await buildToolContext(supabase);
 
   // Detecta write pendente do turn anterior
   let pendingWriteBlock = "";
@@ -140,14 +132,13 @@ Exemplos:
     metadata: { runId, channel, external_id: externalId },
   }).select("id").single();
 
-  fetch(`${vps.ingress_url}/hooks/agent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${vps.hooks_token}` },
-    body: JSON.stringify({
-      message: promptMsg, name: "incoming_message", wakeMode: "now", deliver: false, timeoutSeconds: 180,
-      metadata: { thread_id: threadId, run_id: runId, channel, external_id: externalId },
-    }),
-    signal: AbortSignal.timeout(20_000),
+  dispatchAgentHook({
+    instance,
+    message: promptMsg,
+    name: "incoming_message",
+    metadata: { thread_id: threadId, run_id: runId, channel, external_id: externalId },
+    timeoutSeconds: 180,
+    abortMs: 20_000,
   }).catch(async (err) => {
     console.error("hook dispatch failed:", err);
     await supabase.from("chat_messages").update({ status: "error", metadata: { error: String(err) } }).eq("id", marcosMsg?.id ?? userMsg.id);

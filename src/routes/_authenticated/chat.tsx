@@ -5,26 +5,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, Sparkles, RefreshCw, Square, Wifi, WifiOff } from "lucide-react";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Send, Trash2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { getToolMeta } from "@/lib/tool-meta";
-import { beginChatStream, endChatStream } from "@/lib/chat-activity";
+import { CFO_QUICK_ACTIONS } from "@/lib/cfo-quick-actions";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({ meta: [{ title: "Conversar com Marcos — Agente CFO" }] }),
   component: ChatPage,
 });
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 type ChatRow = {
   id: number | string;
   role: "user" | "marcos" | "system";
@@ -35,42 +26,18 @@ type ChatRow = {
   created_at: string;
 };
 
-type ChannelOption = {
-  id: string;
-  label: string;
-  threadId: string;
-  kind: "panel";
-};
-
-type ConnState = "idle" | "checking" | "online" | "offline" | "error";
-
 const HISTORY_LIMIT = 50;
-const MAX_SSE_FAILURES = 3;
-const STREAM_FLUSH_MS = 150;
-// Granular SSE health thresholds (ms since last chunk)
-const STREAM_WAIT_SOFT_MS = 15_000;   // → "Marcos pensando…"
-const STREAM_WAIT_HARD_MS = 30_000;   // → "Demorando mais que o esperado…"
-const STREAM_TIMEOUT_MS  = 45_000;    // → abort + retry 1x
-const STREAM_TICK_MS     = 2_000;
 
-// ---------------------------------------------------------------------------
-// Markdown
-// ---------------------------------------------------------------------------
 function renderMarkdown(content: string) {
   const normalized = content.replace(/\\n/g, "\n");
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 last:mb-0" {...props} />,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 last:mb-0" {...props} />,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
+        p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+        ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 last:mb-0" {...props} />,
+        ol: ({ ...props }) => <ol className="list-decimal pl-4 mb-2 last:mb-0" {...props} />,
+        li: ({ ...props }) => <li className="mb-0.5" {...props} />,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         code: ({ inline, children, ...props }: any) =>
           inline ? (
@@ -82,22 +49,17 @@ function renderMarkdown(content: string) {
               <code {...props}>{children}</code>
             </pre>
           ),
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        a: ({ node, ...props }) => (
+        strong: ({ ...props }) => <strong className="font-semibold" {...props} />,
+        a: ({ ...props }) => (
           <a className="underline text-primary" target="_blank" rel="noreferrer" {...props} />
         ),
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        table: ({ node, ...props }) => (
+        table: ({ ...props }) => (
           <div className="overflow-x-auto my-2">
             <table className="text-xs border-collapse" {...props} />
           </div>
         ),
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        th: ({ node, ...props }) => <th className="border px-2 py-1 bg-background/40" {...props} />,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        td: ({ node, ...props }) => <td className="border px-2 py-1" {...props} />,
+        th: ({ ...props }) => <th className="border px-2 py-1 bg-background/40" {...props} />,
+        td: ({ ...props }) => <td className="border px-2 py-1" {...props} />,
       }}
     >
       {normalized}
@@ -105,79 +67,36 @@ function renderMarkdown(content: string) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 function ChatPage() {
   const [messages, setMessages] = useState<ChatRow[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [channels, setChannels] = useState<ChannelOption[]>([]);
-  const [activeChannelId, setActiveChannelId] = useState<string>("panel");
-  const [conn, setConn] = useState<ConnState>("idle");
-  const [streaming, setStreaming] = useState(false);
-  // ms since last SSE chunk for the active stream — drives "pensando…" / "demorando…" hint
-  const [streamWaitMs, setStreamWaitMs] = useState(0);
-  // tool calls per assistant-message id (for inline pills)
-  type ToolPill = { id: string; name: string; startedAt: number; finishedAt?: number };
-  const [toolPills, setToolPills] = useState<Record<string | number, ToolPill[]>>({});
 
-  const sseFailuresRef = useRef(0);
-  const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const knownIdsRef = useRef<Set<string | number>>(new Set());
 
-  const activeChannel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
-  const threadId = activeChannel?.threadId ?? null;
-  const isPanelChannel = activeChannel?.kind === "panel";
+  const threadId = userId ? `panel:${userId}` : null;
 
-  // -------------------------------------------------------------------------
-  // Helpers
-  // -------------------------------------------------------------------------
   const trackId = (id: string | number) => {
     knownIdsRef.current.add(id);
   };
 
-  const upsertMessage = (row: ChatRow) => {
-    setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === row.id);
-      if (idx === -1) return [...prev, row];
-      const next = prev.slice();
-      next[idx] = { ...next[idx], ...row };
-      return next;
-    });
-  };
-
-  // -------------------------------------------------------------------------
-  // Boot: discover user + available channels
-  // -------------------------------------------------------------------------
+  // Boot
   useEffect(() => {
     let mounted = true;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user || !mounted) return;
       setUserId(u.user.id);
-
-      const baseChannels: ChannelOption[] = [
-        {
-          id: "panel",
-          label: "Painel web",
-          threadId: `panel:${u.user.id}`,
-          kind: "panel",
-        },
-      ];
-      if (!mounted) return;
-      setChannels(baseChannels);
     })();
     return () => {
       mounted = false;
     };
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Load history + realtime per active thread
-  // -------------------------------------------------------------------------
+  // Load history + realtime
   useEffect(() => {
     if (!threadId) return;
     let mounted = true;
@@ -204,16 +123,22 @@ function ChatPage() {
         .on(
           "postgres_changes",
           {
-            event: "INSERT",
+            event: "*",
             schema: "public",
             table: "chat_messages",
             filter: `thread_id=eq.${threadId}`,
           },
           (p) => {
             const row = p.new as ChatRow;
-            if (knownIdsRef.current.has(row.id)) return;
-            trackId(row.id);
-            setMessages((prev) => [...prev, row]);
+            if (p.eventType === "INSERT") {
+              if (knownIdsRef.current.has(row.id)) return;
+              trackId(row.id);
+              setMessages((prev) => [...prev, row]);
+            } else if (p.eventType === "UPDATE") {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === row.id ? { ...m, ...row } : m)),
+              );
+            }
           },
         )
         .subscribe();
@@ -224,382 +149,41 @@ function ChatPage() {
     };
   }, [threadId]);
 
-  // -------------------------------------------------------------------------
-  // Connection: SSE goes through edge function chat-stream (CORS proxy).
-  // No gateway URL/token in the browser anymore.
-  // -------------------------------------------------------------------------
-  useEffect(() => {
-    if (!threadId) return;
-    setConn("online");
-  }, [threadId]);
-
-  // -------------------------------------------------------------------------
-  // SSE streaming send
-  // -------------------------------------------------------------------------
-  const sendViaSse = useCallback(
-    async (content: string): Promise<boolean> => {
-      if (!threadId) return false;
-
-      // Proactive refresh — long streams (~60s+) can outlive a token that
-      // was minutes away from expiring. Refresh BEFORE we open the stream
-      // so the bearer token is fresh for the whole duration.
-      try {
-        await supabase.auth.refreshSession();
-      } catch {
-        // ignore — we'll fall through and surface the 401 below
-      }
-      const { data: sess0 } = await supabase.auth.getSession();
-      if (!sess0.session?.access_token) {
-        toast.error("Sessão expirada — faça login de novo");
-        return false;
-      }
-
-      // 1. insert user message
-      const { data: userRow, error: userErr } = await supabase
-        .from("chat_messages")
-        .insert({ thread_id: threadId, role: "user", content, status: "sent" })
-        .select()
-        .single();
-      if (userErr || !userRow) {
-        toast.error("Falha ao salvar mensagem");
-        return false;
-      }
-      trackId(userRow.id);
-      upsertMessage(userRow as ChatRow);
-
-      // 2. insert placeholder assistant message (reused across retries)
-      const { data: asstRow, error: asstErr } = await supabase
-        .from("chat_messages")
-        .insert({ thread_id: threadId, role: "marcos", content: "", status: "streaming" })
-        .select()
-        .single();
-      if (asstErr || !asstRow) {
-        toast.error("Falha ao criar placeholder");
-        return false;
-      }
-      trackId(asstRow.id);
-      upsertMessage(asstRow as ChatRow);
-      const asstId = asstRow.id as number;
-
-      // 3. build short history (last ~10 already-persisted messages)
-      const recent = messages.slice(-10).map((m) => ({
-        role: m.role === "marcos" ? "assistant" : m.role === "user" ? "user" : "system",
-        content: m.content,
-      }));
-      // No system prompt injection — Marcos persona vem do skill agente-cfo
-      // carregado dentro do OpenClaw na VPS.
-      const payloadMessages = [...recent, { role: "user", content }];
-
-      // Single SSE attempt. Returns:
-      //   "ok"      — got [DONE] or stream ended cleanly
-      //   "timeout" — no chunk for STREAM_TIMEOUT_MS, eligible for retry
-      //   "neterr"  — network/HTTP error, eligible for retry
-      //   "fatal"   — auth, 503, user abort — do not retry
-      type Outcome = "ok" | "timeout" | "neterr" | "fatal";
-      const runAttempt = async (): Promise<Outcome> => {
-        const { data: sess } = await supabase.auth.getSession();
-        let accessToken = sess.session?.access_token ?? "";
-        if (!accessToken) return "fatal";
-
-        let buffer = "";
-        let lastFlush = Date.now();
-        let lastChunk = Date.now();
-        let timedOut = false;
-        const ctrl = new AbortController();
-        abortRef.current = ctrl;
-        setStreamWaitMs(0);
-
-        const toolsByIdx = new Map<number, ToolPill>();
-        const flushPills = () => {
-          setToolPills((prev) => ({ ...prev, [asstId]: Array.from(toolsByIdx.values()) }));
-        };
-
-        const timeoutTimer = window.setInterval(() => {
-          const elapsed = Date.now() - lastChunk;
-          setStreamWaitMs(elapsed);
-          if (elapsed > STREAM_TIMEOUT_MS) {
-            timedOut = true;
-            ctrl.abort();
-          }
-        }, STREAM_TICK_MS);
-
-        const flushToDb = async (final = false, errMsg?: string) => {
-          try {
-            await supabase
-              .from("chat_messages")
-              .update({
-                content: errMsg
-                  ? (buffer ? `${buffer}\n\n_${errMsg}_` : errMsg)
-                  : buffer,
-                status: final ? (errMsg ? "error" : "sent") : "streaming",
-              })
-              .eq("id", asstId);
-          } catch {
-            // ignore transient
-          }
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === asstId
-                ? {
-                    ...m,
-                    content: errMsg
-                      ? (buffer ? `${buffer}\n\n_${errMsg}_` : errMsg)
-                      : buffer,
-                    status: final ? (errMsg ? "error" : "sent") : "streaming",
-                  }
-                : m,
-            ),
-          );
-          lastFlush = Date.now();
-        };
-
-        const doFetch = async (token: string) => {
-          const supaUrl = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
-          const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-          return fetch(`${supaUrl}/functions/v1/chat-stream`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              apikey,
-              "Content-Type": "application/json",
-              Accept: "text/event-stream",
-            },
-            body: JSON.stringify({
-              messages: payloadMessages,
-              max_tokens: 2048,
-            }),
-            signal: ctrl.signal,
-          });
-        };
-
-        const cleanup = () => {
-          window.clearInterval(timeoutTimer);
-          setStreamWaitMs(0);
-          abortRef.current = null;
-        };
-
-        try {
-          let res = await doFetch(accessToken);
-
-          if (res.status === 401) {
-            try {
-              await supabase.auth.refreshSession();
-            } catch { /* fallthrough */ }
-            const retry = await supabase.auth.getSession();
-            accessToken = retry.data.session?.access_token ?? "";
-            if (accessToken) res = await doFetch(accessToken);
-            if (res.status === 401) {
-              await flushToDb(true, "Sessão expirou — entre de novo");
-              cleanup();
-              return "fatal";
-            }
-          }
-          if (res.status === 503) {
-            const t = await res.text().catch(() => "");
-            await flushToDb(true, t || "Marcos offline");
-            cleanup();
-            return "fatal";
-          }
-          if (res.status === 404) {
-            await flushToDb(true, "Modo streaming desabilitado na VPS");
-            cleanup();
-            return "fatal";
-          }
-          if (!res.ok || !res.body) {
-            cleanup();
-            return "neterr";
-          }
-
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let pending = "";
-
-          // eslint-disable-next-line no-constant-condition
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            // any byte from upstream (incl. `: keepalive`) keeps the watchdog happy
-            lastChunk = Date.now();
-            setStreamWaitMs(0);
-            pending += decoder.decode(value, { stream: true });
-            const lines = pending.split("\n");
-            pending = lines.pop() ?? "";
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-              const payload = trimmed.slice(5).trim();
-              if (payload === "[DONE]") {
-                const now = Date.now();
-                toolsByIdx.forEach((p) => { if (!p.finishedAt) p.finishedAt = now; });
-                flushPills();
-                await flushToDb(true);
-                cleanup();
-                sseFailuresRef.current = 0;
-                return "ok";
-              }
-              try {
-                const json = JSON.parse(payload);
-                const delta = json.choices?.[0]?.delta;
-                const textDelta: string = delta?.content ?? "";
-                if (textDelta) {
-                  const now = Date.now();
-                  let pillsChanged = false;
-                  toolsByIdx.forEach((p) => {
-                    if (!p.finishedAt) { p.finishedAt = now; pillsChanged = true; }
-                  });
-                  if (pillsChanged) flushPills();
-                  buffer += textDelta;
-                  if (Date.now() - lastFlush > STREAM_FLUSH_MS) {
-                    await flushToDb(false);
-                  }
-                }
-                const toolDeltas = delta?.tool_calls;
-                if (Array.isArray(toolDeltas)) {
-                  let pillsChanged = false;
-                  for (const td of toolDeltas) {
-                    const idx = typeof td.index === "number" ? td.index : 0;
-                    const existing = toolsByIdx.get(idx);
-                    const fnName = td.function?.name;
-                    if (!existing) {
-                      toolsByIdx.set(idx, {
-                        id: td.id ?? `tool-${idx}`,
-                        name: fnName ?? "",
-                        startedAt: Date.now(),
-                      });
-                      pillsChanged = true;
-                    } else if (fnName && !existing.name) {
-                      existing.name = fnName;
-                      pillsChanged = true;
-                    }
-                  }
-                  if (pillsChanged) flushPills();
-                }
-              } catch {
-                // ignore non-JSON keepalives
-              }
-            }
-          }
-          // stream ended without [DONE]
-          const now = Date.now();
-          toolsByIdx.forEach((p) => { if (!p.finishedAt) p.finishedAt = now; });
-          flushPills();
-          await flushToDb(true);
-          cleanup();
-          sseFailuresRef.current = 0;
-          return "ok";
-        } catch (err) {
-          cleanup();
-          const aborted = (err as Error)?.name === "AbortError";
-          if (aborted && timedOut) return "timeout";
-          if (aborted) {
-            await flushToDb(true, "Cancelado pelo usuário");
-            return "fatal";
-          }
-          return "neterr";
-        }
-      };
-
-      setStreaming(true);
-      beginChatStream();
-      try {
-        let outcome = await runAttempt();
-
-        // Auto-retry exactly once on timeout / network error.
-        if (outcome === "timeout" || outcome === "neterr") {
-          toast.warning(
-            outcome === "timeout"
-              ? "Marcos demorou demais — reconectando…"
-              : "Conexão caiu — tentando de novo…",
-          );
-          // brief pause to let any half-open connection settle
-          await new Promise((r) => setTimeout(r, 800));
-          outcome = await runAttempt();
-        }
-
-        if (outcome === "timeout" || outcome === "neterr") {
-          // give up — persist a clear error on the same placeholder
-          const msg =
-            outcome === "timeout"
-              ? "Conexão expirou após 45s sem resposta — reenvie a mensagem"
-              : "Falha de conexão com Marcos — reenvie a mensagem";
-          try {
-            await supabase
-              .from("chat_messages")
-              .update({ content: msg, status: "error" })
-              .eq("id", asstId);
-          } catch { /* noop */ }
-          setMessages((prev) =>
-            prev.map((m) => (m.id === asstId ? { ...m, content: msg, status: "error" } : m)),
-          );
-          sseFailuresRef.current += 1;
-          toast.error(msg);
-          return false;
-        }
-
-        return outcome === "ok";
-      } finally {
-        setStreaming(false);
-        endChatStream();
-      }
-    },
-    [threadId, messages],
-  );
-
-  // -------------------------------------------------------------------------
-  // Legacy fallback
-  // -------------------------------------------------------------------------
-  const sendViaFallback = useCallback(
+  const sendMessage = useCallback(
     async (content: string) => {
-      toast.warning("SSE indisponível, usando modo lento");
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) {
-        toast.error("Sem sessão");
-        return;
+      if (!threadId || sending) return;
+      setSending(true);
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (!token) {
+          toast.error("Sessão expirada — faça login de novo");
+          return;
+        }
+        const { error } = await supabase.functions.invoke("chat-send-message", {
+          body: { content },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (error) {
+          toast.error(`Falha: ${error.message ?? String(error)}`);
+        }
+      } finally {
+        setSending(false);
       }
-      const { error } = await supabase.functions.invoke("chat-send-message", {
-        body: { content },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (error) toast.error(`Falha: ${String(error)}`);
     },
-    [],
+    [threadId, sending],
   );
 
-  // -------------------------------------------------------------------------
-  // Send dispatcher
-  // -------------------------------------------------------------------------
   const send = async () => {
     const content = input.trim();
-    if (!content || streaming) return;
-    if (!isPanelChannel) {
-      toast.info("Para enviar nessa linha, use o WhatsApp do celular", {
-        description: "O painel só envia mensagens pelo canal Painel web.",
-      });
-      return;
-    }
+    if (!content) return;
     setInput("");
-
-    if (sseFailuresRef.current >= MAX_SSE_FAILURES) {
-      await sendViaFallback(content);
-      return;
-    }
-
-    const ok = await sendViaSse(content);
-    if (!ok && sseFailuresRef.current >= MAX_SSE_FAILURES) {
-      await sendViaFallback(content);
-    }
+    await sendMessage(content);
   };
 
-  const cancel = () => {
-    abortRef.current?.abort();
-  };
-
-  const reconnect = async () => {
-    sseFailuresRef.current = 0;
-    setConn("online");
-    toast.success("Pronto pra tentar de novo");
+  const onQuickAction = async (prompt: string) => {
+    if (sending) return;
+    await sendMessage(prompt);
   };
 
   const clearHistory = async () => {
@@ -615,33 +199,11 @@ function ChatPage() {
     toast.success("Histórico limpo");
   };
 
-  // autoscroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
-  const connDot =
-    conn === "online" ? "bg-green-500" :
-    conn === "checking" ? "bg-yellow-500 animate-pulse" :
-    conn === "offline" || conn === "error" ? "bg-red-500" :
-    "bg-muted-foreground/40";
-
-  const connLabel =
-    conn === "online" ? "conectado · streaming SSE" :
-    conn === "checking" ? "verificando..." :
-    conn === "offline" ? "Marcos offline" :
-    conn === "error" ? "erro de conexão" :
-    "—";
-
-  const inputDisabled = streaming || conn === "offline";
-  const inputPlaceholder =
-    conn === "online" ? "Pergunte algo ao Marcos..." :
-    conn === "checking" ? "Conectando..." :
-    conn === "offline" ? "Marcos está offline — verifique em /settings" :
-    "Pergunte algo ao Marcos...";
+  const showQuickActions = !loading && messages.length === 0;
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] max-w-4xl mx-auto w-full">
@@ -652,40 +214,17 @@ function ChatPage() {
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <div className="font-semibold leading-tight flex items-center gap-2">
-              Marcos — seu CFO virtual
-              <span className="inline-flex items-center gap-1 text-[11px] font-normal px-1.5 py-0.5 rounded-full bg-muted/50">
-                {conn === "online" ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                {conn === "online" ? "online" : "off"}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className={`h-2 w-2 rounded-full ${connDot}`} />
-              {connLabel}
-              {activeChannel && (
-                <>
-                  <span className="opacity-50">·</span>
-                  <span>Falando como: <strong className="text-foreground">{activeChannel.label}</strong></span>
-                </>
-              )}
+            <div className="font-semibold leading-tight">Marcos — seu CFO virtual</div>
+            <div className="text-xs text-muted-foreground">
+              Mesmo pipeline do WhatsApp · confirma writes antes de executar
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          {(conn === "offline" || conn === "error") && (
-            <Button variant="ghost" size="sm" onClick={reconnect}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Reconectar
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={clearHistory} disabled={messages.length === 0 || !isPanelChannel}>
-            <Trash2 className="h-4 w-4 mr-1" />
-            Limpar
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={clearHistory} disabled={messages.length === 0}>
+          <Trash2 className="h-4 w-4 mr-1" />
+          Limpar
+        </Button>
       </div>
-
-      {/* Channel selector removed — only panel channel exists */}
 
       {/* Body */}
       <ScrollArea className="flex-1 my-3">
@@ -701,8 +240,7 @@ function ChatPage() {
           ) : (
             messages.map((m) => {
               const isUser = m.role === "user";
-              const isStreaming = m.status === "streaming";
-              const pills = !isUser ? toolPills[m.id] ?? [] : [];
+              const isPending = !isUser && m.status === "pending";
               return (
                 <div
                   key={m.id}
@@ -717,55 +255,16 @@ function ChatPage() {
                         : "bg-muted text-foreground"
                     } ${m.status === "error" ? "border border-destructive/50" : ""}`}
                   >
-                    {pills.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {pills.map((p) => {
-                          const meta = getToolMeta(p.name || "");
-                          const done = !!p.finishedAt;
-                          const ms = done ? (p.finishedAt! - p.startedAt) : 0;
-                          return (
-                            <span
-                              key={p.id}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border ${
-                                done
-                                  ? "bg-background/60 border-border text-muted-foreground"
-                                  : "bg-background/80 border-primary/30 text-foreground animate-pulse"
-                              }`}
-                              title={p.name}
-                            >
-                              <span>{meta.icon}</span>
-                              <span className="font-medium">{meta.label}</span>
-                              {done ? (
-                                <span className="opacity-70">· {ms}ms ✓</span>
-                              ) : (
-                                <span className="opacity-70">· consultando…</span>
-                              )}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
                     {isUser ? (
                       <div>{m.content}</div>
                     ) : m.content ? (
-                      <div className="leading-relaxed">
-                        {renderMarkdown(m.content)}
-                        {isStreaming && (
-                          <span className="inline-block w-1.5 h-4 ml-0.5 bg-current animate-pulse align-text-bottom" />
-                        )}
-                      </div>
-                    ) : isStreaming ? (
+                      <div className="leading-relaxed">{renderMarkdown(m.content)}</div>
+                    ) : isPending ? (
                       <div className="flex items-center gap-1 py-1 text-muted-foreground">
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
                         <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
-                        <span className="ml-2 text-xs">
-                          {streamWaitMs > STREAM_WAIT_HARD_MS
-                            ? "⏱️ Demorando mais que o esperado…"
-                            : streamWaitMs > STREAM_WAIT_SOFT_MS
-                              ? "⏳ Marcos pensando…"
-                              : "Marcos pensando..."}
-                        </span>
+                        <span className="ml-2 text-xs">Marcos pensando…</span>
                       </div>
                     ) : null}
                     {m.status === "error" && !m.content && (
@@ -780,6 +279,23 @@ function ChatPage() {
         </div>
       </ScrollArea>
 
+      {/* Quick actions */}
+      {showQuickActions && (
+        <div className="flex flex-wrap gap-2 pb-3">
+          {CFO_QUICK_ACTIONS.map((a) => (
+            <Button
+              key={a.label}
+              variant="outline"
+              size="sm"
+              onClick={() => onQuickAction(a.prompt)}
+              disabled={sending}
+            >
+              {a.label}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex gap-2 pt-2 border-t">
         <Input
@@ -791,19 +307,13 @@ function ChatPage() {
               send();
             }
           }}
-          placeholder={inputPlaceholder}
-          disabled={inputDisabled}
+          placeholder="Pergunte algo ao Marcos..."
+          disabled={sending}
           className="flex-1"
         />
-        {streaming ? (
-          <Button onClick={cancel} variant="destructive">
-            <Square className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button onClick={send} disabled={inputDisabled || !input.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
-        )}
+        <Button onClick={send} disabled={sending || !input.trim()}>
+          <Send className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
