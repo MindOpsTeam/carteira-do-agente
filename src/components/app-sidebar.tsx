@@ -50,6 +50,7 @@ const mainItems = [
 
 const channelItems = [
   { title: "WhatsApp", url: "/settings/whatsapp", icon: MessageCircle },
+  { title: "Telegram", url: "/settings/telegram", icon: Send },
 ];
 
 const adminItems = [
