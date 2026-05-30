@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
 Canal: ${channelLabel}
 Phone/Chat: ${externalId}
 Usuário: ${content}
-${contextBlock}${pendingWriteBlock}
+${contextBlock}${historyBlock}${pendingWriteBlock}
 Você é Marcos, CFO virtual. Leia e siga rigorosamente:
   $HOME/.openclaw/workspace/skills/agente-cfo/prompts/conversa.md
 
