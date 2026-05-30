@@ -69,7 +69,28 @@ Deno.serve(async (req: Request) => {
 
   const contextBlock = await buildToolContext(supabase);
 
-  // Detecta write pendente do turn anterior
+  // Histórico recente do thread (cross-turn context — hooks são stateless)
+  let historyBlock = "";
+  const { data: recentMsgs } = await supabase
+    .from("chat_messages")
+    .select("role,content,status,created_at")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: false })
+    .limit(8);
+  if (recentMsgs && recentMsgs.length > 0) {
+    const chrono = recentMsgs
+      .filter((m) => m.content && m.content.trim() && m.status !== "pending")
+      .reverse();
+    if (chrono.length > 0) {
+      const lines = chrono.map((m) => {
+        const c = m.content.length > 300 ? m.content.slice(0, 300) + "…" : m.content;
+        return `[${m.role}]: ${c}`;
+      }).join("\n");
+      historyBlock = `\n\nHISTÓRICO RECENTE DA CONVERSA (mais antigo→mais novo):\n${lines}\n\nUse o histórico acima como contexto. Se a mensagem atual for uma confirmação (SIM/NÃO) de um rascunho que VOCÊ propôs no histórico, execute/cancele esse lançamento.`;
+    }
+  }
+
+  // Detecta write pendente do turn anterior (fallback via metadata)
   let pendingWriteBlock = "";
   const { data: pendingMsg } = await supabase.from("chat_messages")
     .select("metadata").eq("thread_id", threadId).eq("role", "marcos")
