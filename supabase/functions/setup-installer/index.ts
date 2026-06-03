@@ -5,7 +5,10 @@
  */
 import { adminClient } from "../_shared/auth.ts";
 
-const SETUP_URL = "https://raw.githubusercontent.com/MindOpsTeam/agente-cfo/main/install/setup.sh";
+// Repo do instalador. O script gerado resolve a ÚLTIMA RELEASE publicada em
+// runtime e fixa a instalação nessa tag (REPO_REF) — instalação reproduzível;
+// um push ruim no main não chega aos clientes. Fallback para main.
+const REPO_SLUG = "MindOpsTeam/agente-cfo";
 
 function shEscape(v: string): string {
   return `'${String(v).replace(/'/g, "'\\''")}'`;
@@ -72,8 +75,14 @@ chmod 600 "$HOME/.agente-cfo/.install_env.sh"
 # shellcheck disable=SC1091
 source "$HOME/.agente-cfo/.install_env.sh"
 
-echo "==> Baixando e executando setup.sh..."
-curl -fsSL ${SETUP_URL} | bash
+echo "==> Resolvendo última release do Agente CFO..."
+REPO_REF="$(curl -fsSL https://api.github.com/repos/${REPO_SLUG}/releases/latest 2>/dev/null \
+  | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 \
+  | sed -E 's/.*"([^"]+)"$/\\1/')"
+[ -z "$REPO_REF" ] && { echo "   (sem release publicada — usando main)"; REPO_REF=main; }
+export REPO_REF
+echo "==> Baixando e executando setup.sh (ref: $REPO_REF)..."
+curl -fsSL "https://raw.githubusercontent.com/${REPO_SLUG}/$REPO_REF/install/setup.sh" | bash
 `;
 
   return new Response(script, {
