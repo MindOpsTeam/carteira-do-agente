@@ -705,6 +705,24 @@ export type Database = {
           },
         ]
       }
+      panel_config: {
+        Row: {
+          created_at: string
+          id: number
+          panel_token: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          panel_token: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          panel_token?: string
+        }
+        Relationships: []
+      }
       report_issues_log: {
         Row: {
           created_at: string
