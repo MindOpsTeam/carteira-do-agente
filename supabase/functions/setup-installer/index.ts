@@ -3,7 +3,7 @@
  * Público (verify_jwt=false). Valida token one-time e retorna shell script bash
  * com .install_env.sh já preenchido + curl do setup.sh real.
  */
-import { adminClient } from "../_shared/auth.ts";
+import { adminClient, ensurePanelToken } from "../_shared/auth.ts";
 
 // Repo do instalador. O script gerado resolve a ÚLTIMA RELEASE publicada em
 // runtime e fixa a instalação nessa tag (REPO_REF) — instalação reproduzível;
@@ -81,6 +81,9 @@ Deno.serve(async (req: Request) => {
   const envLines = buildEnvVars((row.metadata ?? {}) as Record<string, unknown>);
   // O painel conhece a própria URL Supabase → injeta pra o setup.sh não perguntar.
   envLines.unshift(`export PANEL_BASE_URL=${shEscape(`${url.origin}/functions/v1`)}`);
+  // PANEL_TOKEN compartilhado: o painel gera/guarda (panel_config) e injeta aqui.
+  // Assim a VPS já recebe o token e o painel o valida — sem colar secret à mão.
+  envLines.unshift(`export PANEL_TOKEN=${shEscape(await ensurePanelToken())}`);
 
   const script = `#!/usr/bin/env bash
 # Agente CFO — installer (gerado pelo painel)

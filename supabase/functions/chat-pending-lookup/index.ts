@@ -3,7 +3,7 @@ import { adminClient, corsHeaders, errorResponse, jsonResponse, validatePanelTok
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "GET") return errorResponse("Method not allowed", 405);
-  if (!validatePanelToken(req)) return errorResponse("Token inválido", 401);
+  if (!(await validatePanelToken(req))) return errorResponse("Token inválido", 401);
 
   const url = new URL(req.url);
   const channel = (url.searchParams.get("channel") ?? "").trim();

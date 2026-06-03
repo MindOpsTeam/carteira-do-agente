@@ -19,7 +19,7 @@ import { adminClient, corsHeaders, errorResponse, jsonResponse, validatePanelTok
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
-  if (!validatePanelToken(req)) return errorResponse("Token inválido", 401);
+  if (!(await validatePanelToken(req))) return errorResponse("Token inválido", 401);
 
   let body: { dedup_key?: string; channel?: string; external_id?: string; source?: string };
   try { body = await req.json(); } catch { return errorResponse("Body JSON inválido", 400); }

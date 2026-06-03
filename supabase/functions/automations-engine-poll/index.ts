@@ -184,7 +184,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Auth dupla: X-Panel-Token + X-Hooks-Token ────────────────────────
-  if (!validatePanelToken(req)) {
+  if (!(await validatePanelToken(req))) {
     return errorResponse("X-Panel-Token inválido ou ausente", 401);
   }
 

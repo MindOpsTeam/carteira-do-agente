@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
-  if (!validatePanelToken(req)) return errorResponse("Invalid panel token", 401);
+  if (!(await validatePanelToken(req))) return errorResponse("Invalid panel token", 401);
   const hooksToken = req.headers.get("X-Hooks-Token");
   if (!hooksToken) return errorResponse("X-Hooks-Token obrigatório", 401);
 

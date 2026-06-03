@@ -21,13 +21,56 @@ export function adminClient(): SupabaseClient {
 }
 
 // ---------------------------------------------------------------------------
-// Validar X-Panel-Token contra env PANEL_TOKEN
-// Retorna true se válido, false caso contrário.
+// Token compartilhado VPS <-> painel.
+// Fonte da verdade: secret PANEL_TOKEN (env) se existir; senão a tabela
+// panel_config (gerada/preenchida pelo setup-installer). Isso permite instalação
+// ponta-a-ponta sem o cliente colar nenhum secret à mão.
 // ---------------------------------------------------------------------------
-export function validatePanelToken(req: Request): boolean {
+export async function getPanelToken(): Promise<string> {
+  const env = Deno.env.get("PANEL_TOKEN");
+  if (env) return env;
+  const { data } = await adminClient()
+    .from("panel_config")
+    .select("panel_token")
+    .eq("id", 1)
+    .maybeSingle();
+  return data?.panel_token ?? "";
+}
+
+// Garante que exista um panel_token no DB (gera na primeira vez) e retorna-o.
+// Usado pelo setup-installer pra injetar o token no .install_env.sh da VPS.
+export async function ensurePanelToken(): Promise<string> {
+  const env = Deno.env.get("PANEL_TOKEN");
+  if (env) return env;
+  const admin = adminClient();
+  const { data } = await admin
+    .from("panel_config")
+    .select("panel_token")
+    .eq("id", 1)
+    .maybeSingle();
+  if (data?.panel_token) return data.panel_token;
+  const buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+  const tok = Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+  await admin
+    .from("panel_config")
+    .upsert({ id: 1, panel_token: tok }, { onConflict: "id", ignoreDuplicates: true });
+  // Re-lê: se houve corrida, fica com o token que ganhou o insert.
+  const { data: after } = await admin
+    .from("panel_config")
+    .select("panel_token")
+    .eq("id", 1)
+    .maybeSingle();
+  return after?.panel_token ?? tok;
+}
+
+// ---------------------------------------------------------------------------
+// Validar X-Panel-Token. Retorna true se válido, false caso contrário.
+// ---------------------------------------------------------------------------
+export async function validatePanelToken(req: Request): Promise<boolean> {
   const token = req.headers.get("X-Panel-Token");
   if (!token) return false;
-  const expected = Deno.env.get("PANEL_TOKEN");
+  const expected = await getPanelToken();
   if (!expected) return false;
   // Comparação constante (evita timing attacks)
   if (token.length !== expected.length) return false;

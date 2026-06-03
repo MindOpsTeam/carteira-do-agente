@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Method not allowed", 405);
   }
 
-  if (!validatePanelToken(req)) {
+  if (!(await validatePanelToken(req))) {
     return errorResponse("Token inválido", 401);
   }
 

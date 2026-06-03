@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Auth: X-Panel-Token (single-tenant) ───────────────────────────────
-  if (!validatePanelToken(req)) {
+  if (!(await validatePanelToken(req))) {
     return errorResponse("X-Panel-Token inválido ou ausente", 401);
   }
 
