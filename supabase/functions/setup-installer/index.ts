@@ -14,29 +14,47 @@ function shEscape(v: string): string {
   return `'${String(v).replace(/'/g, "'\\''")}'`;
 }
 
+// Nome no onboarding → nome da pasta de skill no monorepo (quando diferem).
+// Ex.: o onboarding salva "rdstation", mas a skill no repo é "rd-station".
+const SKILL_NAME_MAP: Record<string, string> = { rdstation: "rd-station" };
+const skillName = (n: string) => SKILL_NAME_MAP[n] ?? n;
+
+// IMPORTANTE: os nomes abaixo TÊM que casar exatamente com o que o setup.sh lê
+// (CFO_WHATSAPP_TO, CFO_ERP_NAME, OMIE_APP_KEY, CFO_CRM_NAME, ...). Se divergirem,
+// o instalador não enxerga os presets e volta a PERGUNTAR tudo no terminal.
 function buildEnvVars(data: Record<string, unknown>): string[] {
   const lines: string[] = [];
+  // Instalação dirigida pelo painel = roda sem perguntas interativas.
+  lines.push(`export NONINTERACTIVE=1`);
+
   const ant = data.anthropic_key as string | undefined;
   if (ant) lines.push(`export ANTHROPIC_API_KEY=${shEscape(ant)}`);
 
   const wa = data.whatsapp_phone as string | undefined;
-  if (wa) lines.push(`export WHATSAPP_OWNER_PHONE=${shEscape(wa)}`);
+  if (wa) lines.push(`export CFO_WHATSAPP_TO=${shEscape(wa)}`);
 
   const erp = data.erp as { name?: string; credentials?: Record<string, string> } | undefined;
-  if (erp?.name && erp.credentials) {
-    lines.push(`export ERP_NAME=${shEscape(erp.name)}`);
-    for (const [k, v] of Object.entries(erp.credentials)) {
-      lines.push(`export ${k.toUpperCase()}=${shEscape(String(v))}`);
+  if (erp?.name && erp.name !== "none") {
+    lines.push(`export CFO_ERP_NAME=${shEscape(skillName(erp.name))}`);
+    // setup.sh lê credenciais como <ERP>_<CAMPO> (ex.: OMIE_APP_KEY, OMIE_APP_SECRET).
+    const prefix = String(erp.name).toUpperCase().replace(/[^A-Z0-9]/g, "_");
+    for (const [k, v] of Object.entries(erp.credentials ?? {})) {
+      lines.push(`export ${prefix}_${k.toUpperCase()}=${shEscape(String(v))}`);
     }
   }
 
-  const crm = data.crm as { name?: string; credentials?: Record<string, string> } | undefined;
-  if (crm?.name && crm.credentials) {
-    lines.push(`export CRM_NAME=${shEscape(crm.name)}`);
-    for (const [k, v] of Object.entries(crm.credentials)) {
-      lines.push(`export ${k.toUpperCase()}=${shEscape(String(v))}`);
-    }
-  }
+  // CRM / cobrança / e-commerce: o setup.sh só precisa do NOME pra instalar a skill
+  // (as credenciais sincronizam do painel via Vault). "none" → "nenhum" (sentinela
+  // que o setup.sh espera) pra NÃO cair em pergunta interativa.
+  const crm = data.crm as { name?: string } | undefined;
+  lines.push(`export CFO_CRM_NAME=${shEscape(crm?.name && crm.name !== "none" ? skillName(crm.name) : "nenhum")}`);
+
+  const billing = data.billing as { name?: string } | undefined;
+  lines.push(`export CFO_COBRANCA_NAME=${shEscape(billing?.name && billing.name !== "none" ? skillName(billing.name) : "nenhum")}`);
+
+  const ecommerce = data.ecommerce as { name?: string } | undefined;
+  lines.push(`export CFO_ECOMMERCE_NAME=${shEscape(ecommerce?.name && ecommerce.name !== "none" ? skillName(ecommerce.name) : "nenhum")}`);
+
   return lines;
 }
 
@@ -61,6 +79,8 @@ Deno.serve(async (req: Request) => {
   await admin.from("installer_tokens").update({ used_at: new Date().toISOString() }).eq("token", token);
 
   const envLines = buildEnvVars((row.metadata ?? {}) as Record<string, unknown>);
+  // O painel conhece a própria URL Supabase → injeta pra o setup.sh não perguntar.
+  envLines.unshift(`export PANEL_BASE_URL=${shEscape(`${url.origin}/functions/v1`)}`);
 
   const script = `#!/usr/bin/env bash
 # Agente CFO — installer (gerado pelo painel)
