@@ -14,48 +14,20 @@ function shEscape(v: string): string {
   return `'${String(v).replace(/'/g, "'\\''")}'`;
 }
 
-// Nome no onboarding → nome da pasta de skill no monorepo (quando diferem).
-// Ex.: o onboarding salva "rdstation", mas a skill no repo é "rd-station".
-const SKILL_NAME_MAP: Record<string, string> = { rdstation: "rd-station" };
-const skillName = (n: string) => SKILL_NAME_MAP[n] ?? n;
+// Base64 UTF-8-safe (payload do onboarding é pequeno, <1KB).
+function b64(s: string): string {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+}
 
-// IMPORTANTE: os nomes abaixo TÊM que casar exatamente com o que o setup.sh lê
-// (CFO_WHATSAPP_TO, CFO_ERP_NAME, OMIE_APP_KEY, CFO_CRM_NAME, ...). Se divergirem,
-// o instalador não enxerga os presets e volta a PERGUNTAR tudo no terminal.
+// PAINEL "BURRO" (estável): emite apenas o JSON do onboarding em base64. TODO o
+// mapeamento nome-de-variável (CFO_ERP_NAME, OMIE_APP_KEY, none→nenhum, etc.) mora
+// no setup.sh central (MindOpsTeam/agente-cfo), que se propaga sozinho. Assim,
+// mudanças no instalador NÃO exigem reatualizar o painel de cada cliente.
 function buildEnvVars(data: Record<string, unknown>): string[] {
-  const lines: string[] = [];
-  // Instalação dirigida pelo painel = roda sem perguntas interativas.
-  lines.push(`export NONINTERACTIVE=1`);
-
-  const ant = data.anthropic_key as string | undefined;
-  if (ant) lines.push(`export ANTHROPIC_API_KEY=${shEscape(ant)}`);
-
-  const wa = data.whatsapp_phone as string | undefined;
-  if (wa) lines.push(`export CFO_WHATSAPP_TO=${shEscape(wa)}`);
-
-  const erp = data.erp as { name?: string; credentials?: Record<string, string> } | undefined;
-  if (erp?.name && erp.name !== "none") {
-    lines.push(`export CFO_ERP_NAME=${shEscape(skillName(erp.name))}`);
-    // setup.sh lê credenciais como <ERP>_<CAMPO> (ex.: OMIE_APP_KEY, OMIE_APP_SECRET).
-    const prefix = String(erp.name).toUpperCase().replace(/[^A-Z0-9]/g, "_");
-    for (const [k, v] of Object.entries(erp.credentials ?? {})) {
-      lines.push(`export ${prefix}_${k.toUpperCase()}=${shEscape(String(v))}`);
-    }
-  }
-
-  // CRM / cobrança / e-commerce: o setup.sh só precisa do NOME pra instalar a skill
-  // (as credenciais sincronizam do painel via Vault). "none" → "nenhum" (sentinela
-  // que o setup.sh espera) pra NÃO cair em pergunta interativa.
-  const crm = data.crm as { name?: string } | undefined;
-  lines.push(`export CFO_CRM_NAME=${shEscape(crm?.name && crm.name !== "none" ? skillName(crm.name) : "nenhum")}`);
-
-  const billing = data.billing as { name?: string } | undefined;
-  lines.push(`export CFO_COBRANCA_NAME=${shEscape(billing?.name && billing.name !== "none" ? skillName(billing.name) : "nenhum")}`);
-
-  const ecommerce = data.ecommerce as { name?: string } | undefined;
-  lines.push(`export CFO_ECOMMERCE_NAME=${shEscape(ecommerce?.name && ecommerce.name !== "none" ? skillName(ecommerce.name) : "nenhum")}`);
-
-  return lines;
+  return [
+    `export NONINTERACTIVE=1`,
+    `export CFO_ONBOARDING_B64=${shEscape(b64(JSON.stringify(data ?? {})))}`,
+  ];
 }
 
 Deno.serve(async (req: Request) => {
