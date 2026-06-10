@@ -299,6 +299,9 @@ const ERP_OPTIONS: Array<{ id: ErpName | "none"; name: string; fields?: Array<{ 
     { key: "secret_token", label: "Secret Token", type: "password" },
   ]},
   { id: "nibo", name: "Nibo", fields: [{ key: "api_token", label: "API Token", type: "password" }] },
+  { id: "holdprint", name: "Holdprint (gráfica)", helpUrl: "https://docs.holdworks.ai", fields: [
+    { key: "api_key", label: "API Key (Ajustes → API)", type: "password" },
+  ]},
   { id: "none", name: "Pular por enquanto" },
 ];
 

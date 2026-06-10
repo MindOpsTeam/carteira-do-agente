@@ -13,6 +13,7 @@ const REQUIRED: Record<string, string[]> = {
   granatum: ["token"],
   vhsys: ["access_token", "secret_token"],
   nibo: ["api_token"],
+  holdprint: ["api_key"],
 };
 
 Deno.serve(async (req: Request) => {
@@ -32,6 +33,22 @@ Deno.serve(async (req: Request) => {
   for (const f of required) {
     if (!creds[f] || String(creds[f]).trim().length < 4) {
       return jsonResponse({ valid: false, error: `Campo '${f}' obrigatório` });
+    }
+  }
+
+  // Holdprint: validação REAL da API key (GET barato) — feedback imediato ao cliente.
+  if (name === "holdprint") {
+    try {
+      const r = await fetch("https://api.holdworks.ai/api-key/customers/data?limit=1", {
+        headers: { "x-api-key": String(creds.api_key ?? "") },
+      });
+      if (r.status === 401) {
+        return jsonResponse({ valid: false, error: "API Key inválida (401). Confira em Holdprint → Ajustes → API." });
+      }
+      if (r.ok) return jsonResponse({ valid: true, company_name: "Holdprint", message: "API Key válida." });
+      return jsonResponse({ valid: true, company_name: null, message: `Holdprint respondeu ${r.status}; validação final no setup da VPS.` });
+    } catch {
+      return jsonResponse({ valid: true, company_name: null, message: "Não consegui validar agora; validação no setup da VPS." });
     }
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type ErpName = "omie" | "bling" | "contaazul" | "tiny" | "granatum" | "vhsys" | "nibo";
+export type ErpName = "omie" | "bling" | "contaazul" | "tiny" | "granatum" | "vhsys" | "nibo" | "holdprint";
 export type CrmName = "hubspot" | "rdstation" | "piperun" | "pipedrive";
 export type BillingName = "asaas" | "iugu";
 export type EcommerceName = "mercado-livre" | "nuvemshop";
