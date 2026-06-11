@@ -51,8 +51,11 @@ Deno.serve(async (req: Request) => {
   await admin.from("installer_tokens").update({ used_at: new Date().toISOString() }).eq("token", token);
 
   const envLines = buildEnvVars((row.metadata ?? {}) as Record<string, unknown>);
-  // O painel conhece a própria URL Supabase → injeta pra o setup.sh não perguntar.
-  envLines.unshift(`export PANEL_BASE_URL=${shEscape(`${url.origin}/functions/v1`)}`);
+  // PANEL_BASE_URL: usa a URL CANÔNICA do projeto (SUPABASE_URL) — NÃO o url.origin
+  // da requisição, que pode ser um host que redireciona (301 Cloudflare) e quebra o
+  // registro/heartbeat da VPS. Fallback no origin se SUPABASE_URL não existir.
+  const panelBase = (Deno.env.get("SUPABASE_URL") ?? url.origin).replace(/\/+$/, "");
+  envLines.unshift(`export PANEL_BASE_URL=${shEscape(`${panelBase}/functions/v1`)}`);
   // PANEL_TOKEN compartilhado: o painel gera/guarda (panel_config) e injeta aqui.
   // Assim a VPS já recebe o token e o painel o valida — sem colar secret à mão.
   envLines.unshift(`export PANEL_TOKEN=${shEscape(await ensurePanelToken())}`);
